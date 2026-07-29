@@ -19,7 +19,7 @@ pip install -e ".[dev]"
 # List profiles and budgets
 dapptility-scan profiles
 
-# List rules (rpc | web | all)
+# List rules (rpc | web | contract | all)
 dapptility-scan rules --module all
 
 # Scan an RPC endpoint (Free profile by default)
@@ -27,6 +27,9 @@ dapptility-scan scan https://rpc.example.com --pretty
 
 # Scan a website
 dapptility-scan web https://example.com --pretty
+
+# Scan a smart contract (read-only RPC + optional Sourcify)
+dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1 --pretty
 
 # Outbound profile (blocks known third-party RPC providers)
 dapptility-scan scan https://rpc.example.com --profile Outbound --pretty

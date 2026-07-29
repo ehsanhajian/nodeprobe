@@ -113,6 +113,8 @@ def add_endpoint(
         raise ValueError(f"{kind} targets require a URL")
     if kind == "contract" and not address:
         raise ValueError("contract targets require an address")
+    if kind == "contract" and not url:
+        raise ValueError("contract targets require an RPC URL for scanning")
 
     endpoint = Endpoint(
         project_id=project.id,
@@ -140,8 +142,9 @@ def add_endpoint(
 def execute_scan(db: Session, endpoint: Endpoint, profile: str) -> Scan:
     module = endpoint.kind if endpoint.kind != "website" else "web"
     if module == "contract":
-        raise ValueError("Contract scanner is not implemented yet")
-    if not endpoint.url:
+        if not endpoint.address or not endpoint.url:
+            raise ValueError("Contract targets need address and RPC URL")
+    elif not endpoint.url:
         raise ValueError("Target has no URL to scan")
 
     scan = Scan(
@@ -156,10 +159,17 @@ def execute_scan(db: Session, endpoint: Endpoint, profile: str) -> Scan:
     db.refresh(scan)
 
     try:
-        result = run_scan_for_endpoint(endpoint.url, profile, kind=module)
+        result = run_scan_for_endpoint(
+            endpoint.url,
+            profile,
+            kind=module,
+            address=endpoint.address,
+            chain_id=endpoint.chain_id,
+            abi_json=endpoint.abi_json,
+        )
         scan.status = "aborted" if result.aborted else "completed"
         scan.score = result.score
-        scan.chain_id = result.chain_id
+        scan.chain_id = result.chain_id if result.chain_id is not None else endpoint.chain_id
         scan.network_name = result.network_name
         scan.client_version = result.client_version
         scan.requests_made = result.requests_made

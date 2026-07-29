@@ -52,7 +52,7 @@
           </button>
         </form>
         {% elif ep.kind == 'contract' %}
-        <span class="muted text-sm">Contract scanner coming soon</span>
+        <span class="muted text-sm">Needs address + RPC URL</span>
         {% elif ep.kind == 'rpc' and ep.is_third_party_provider %}
         <span class="muted text-sm">Blocked — third-party hosted</span>
         {% else %}
@@ -79,7 +79,7 @@
       <input name="url" id="url" placeholder="https://rpc.example.com or https://example.com" style="flex:1;margin:0;">
     </div>
     <div id="fields-contract" class="form-inline" style="display:none;gap:0.5rem;flex-wrap:wrap;">
-      <input name="address" id="address" placeholder="0x…" style="flex:1;min-width:16rem;margin:0;">
+      <input name="address" id="address" placeholder="0x… contract address" style="flex:1;min-width:16rem;margin:0;">
       <input name="chain_id" id="chain_id" placeholder="Chain ID" style="width:7rem;margin:0;">
       <input name="source_ref" id="source_ref" placeholder="Sourcify / explorer URL (optional)" style="flex:1;min-width:12rem;margin:0;">
     </div>
@@ -158,14 +158,18 @@ function onKindChange(kind) {
   var urlFields = document.getElementById('fields-url');
   var contractFields = document.getElementById('fields-contract');
   var urlInput = document.getElementById('url');
+  var addressInput = document.getElementById('address');
   if (kind === 'contract') {
-    urlFields.style.display = 'none';
+    urlFields.style.display = 'flex';
     contractFields.style.display = 'flex';
-    urlInput.required = false;
+    urlInput.required = true;
+    urlInput.placeholder = 'https://rpc.example.com (JSON-RPC for this chain)';
+    addressInput.required = true;
   } else {
     urlFields.style.display = 'flex';
     contractFields.style.display = 'none';
     urlInput.required = true;
+    addressInput.required = false;
     urlInput.placeholder = kind === 'web' ? 'https://example.com' : 'https://rpc.example.com';
   }
 }

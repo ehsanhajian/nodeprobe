@@ -4,11 +4,24 @@ import argparse
 import json
 import sys
 
+from dapptility_scanner.contract_engine import ContractScannerEngine
 from dapptility_scanner.engine import ScannerEngine
 from dapptility_scanner.profiles import PROFILES
 from dapptility_scanner.rules import all_rules
 from dapptility_scanner.rules.web import web_rules
 from dapptility_scanner.web_engine import WebScannerEngine
+
+CONTRACT_RULE_CATALOG = [
+    {"rule_id": "SC-IDENT-001", "title": "RPC chain ID mismatch", "category": "Identity"},
+    {"rule_id": "SC-IDENT-002", "title": "Chain outside maintained support list", "category": "Identity"},
+    {"rule_id": "SC-CODE-001", "title": "Contract code presence", "category": "Code"},
+    {"rule_id": "SC-PROXY-001", "title": "Proxy pattern detection", "category": "Proxy"},
+    {"rule_id": "SC-BYTE-001", "title": "SELFDESTRUCT presence", "category": "Bytecode"},
+    {"rule_id": "SC-BYTE-002", "title": "DELEGATECALL presence", "category": "Bytecode"},
+    {"rule_id": "SC-SRC-001", "title": "Sourcify verification", "category": "Source"},
+    {"rule_id": "SC-IFACE-001", "title": "Interface hints", "category": "Interfaces"},
+    {"rule_id": "SC-IFACE-002", "title": "Ownable-style ownership surface", "category": "Access Control"},
+]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -49,11 +62,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Pretty-print JSON output",
     )
 
+    contract = sub.add_parser("contract", help="Scan a smart contract via read-only RPC")
+    contract.add_argument("address", help="Contract address (0x…)")
+    contract.add_argument("--rpc", required=True, help="HTTP(S) JSON-RPC URL for the chain")
+    contract.add_argument("--chain", type=int, default=None, help="Expected chain ID")
+    contract.add_argument(
+        "--profile",
+        default="Free",
+        help="Scan profile: Free | Outbound | Authorized-Full (default: Free)",
+    )
+    contract.add_argument(
+        "--no-sourcify",
+        action="store_true",
+        help="Skip Sourcify verification lookup",
+    )
+    contract.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output",
+    )
+
     sub.add_parser("profiles", help="List scan profiles and budgets")
     rules = sub.add_parser("rules", help="List registered rules")
     rules.add_argument(
         "--module",
-        choices=("rpc", "web", "all"),
+        choices=("rpc", "web", "contract", "all"),
         default="all",
         help="Rule module to list (default: all)",
     )
@@ -68,6 +101,7 @@ def _print_result(result, *, pretty: bool) -> int:
         "unsupported_chain",
         "third_party_provider",
         "kill_switch",
+        "invalid_address",
     }:
         return 2
     return 0
@@ -92,22 +126,41 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "rules":
-        ruleset = []
+        payload = []
         if args.module in {"rpc", "all"}:
-            ruleset.extend(all_rules())
+            payload.extend(
+                {
+                    "rule_id": r.meta.rule_id,
+                    "title": r.meta.title,
+                    "category": r.meta.category,
+                    "severity": r.meta.severity.value,
+                    "kind": r.meta.kind.value,
+                    "profiles": [p.value for p in r.meta.allowed_profiles],
+                }
+                for r in all_rules()
+            )
         if args.module in {"web", "all"}:
-            ruleset.extend(web_rules())
-        payload = [
-            {
-                "rule_id": r.meta.rule_id,
-                "title": r.meta.title,
-                "category": r.meta.category,
-                "severity": r.meta.severity.value,
-                "kind": r.meta.kind.value,
-                "profiles": [p.value for p in r.meta.allowed_profiles],
-            }
-            for r in ruleset
-        ]
+            payload.extend(
+                {
+                    "rule_id": r.meta.rule_id,
+                    "title": r.meta.title,
+                    "category": r.meta.category,
+                    "severity": r.meta.severity.value,
+                    "kind": r.meta.kind.value,
+                    "profiles": [p.value for p in r.meta.allowed_profiles],
+                }
+                for r in web_rules()
+            )
+        if args.module in {"contract", "all"}:
+            payload.extend(
+                {
+                    **item,
+                    "severity": "varies",
+                    "kind": "finding",
+                    "profiles": ["Free", "Outbound", "Authorized-Full"],
+                }
+                for item in CONTRACT_RULE_CATALOG
+            )
         print(json.dumps(payload, indent=2))
         return 0
 
@@ -121,6 +174,16 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "web":
         result = WebScannerEngine(args.url, args.profile).run()
+        return _print_result(result, pretty=args.pretty)
+
+    if args.command == "contract":
+        result = ContractScannerEngine(
+            args.address,
+            rpc_url=args.rpc,
+            chain_id=args.chain,
+            profile=args.profile,
+            fetch_verification=not args.no_sourcify,
+        ).run()
         return _print_result(result, pretty=args.pretty)
 
     parser.error(f"Unknown command: {args.command}")

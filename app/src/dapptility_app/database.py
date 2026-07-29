@@ -78,7 +78,7 @@ class Endpoint(Base):
     @property
     def scanable(self) -> bool:
         if self.kind == "contract":
-            return False  # scanner module not wired yet
+            return bool(self.address and self.url)
         if self.kind == "rpc" and self.is_third_party_provider:
             return False
         return bool(self.url)

@@ -193,10 +193,8 @@ def scan_start(
         raise HTTPException(404)
     if endpoint.kind == "rpc" and endpoint.is_third_party_provider:
         raise HTTPException(400, "Cannot scan third-party provider endpoint")
-    if endpoint.kind == "contract":
-        raise HTTPException(400, "Contract scanner is not implemented yet")
     if not endpoint.scanable:
-        raise HTTPException(400, "Target cannot be scanned")
+        raise HTTPException(400, "Target cannot be scanned (contract needs address + RPC URL)")
     try:
         scan = store.execute_scan(db, endpoint, profile)
     except ValueError as exc:

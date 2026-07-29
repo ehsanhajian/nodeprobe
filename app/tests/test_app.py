@@ -57,8 +57,8 @@ def auth():
 
 @pytest.fixture()
 def mock_scan(monkeypatch):
-    def _mock(url: str, profile: str, *, kind: str = "rpc"):
-        return make_scan_result(url, profile)
+    def _mock(url: str | None, profile: str, *, kind: str = "rpc", address=None, chain_id=None, abi_json=None):
+        return make_scan_result(url or address or "target", profile)
 
     monkeypatch.setattr("dapptility_app.services.store.run_scan_for_endpoint", _mock)
 
@@ -204,7 +204,12 @@ def test_multi_target_kinds(client, auth, mock_scan):
 
     r = client.post(
         f"/admin/projects/{project_id}/endpoints",
-        data={"kind": "contract", "address": "0x" + "ab" * 20, "chain_id": "1"},
+        data={
+            "kind": "contract",
+            "address": "0x" + "ab" * 20,
+            "chain_id": "1",
+            "url": "https://rpc.app.example",
+        },
         auth=auth,
         follow_redirects=False,
     )
@@ -217,8 +222,9 @@ def test_multi_target_kinds(client, auth, mock_scan):
     web = next(ep for ep in endpoints if ep.kind == "web")
     assert web.scanable is True
     contract = next(ep for ep in endpoints if ep.kind == "contract")
-    assert contract.scanable is False
+    assert contract.scanable is True
     assert contract.address.startswith("0x")
+    assert contract.url.startswith("https://rpc")
 
     r = client.post(
         f"/admin/endpoints/{web.id}/scan",
@@ -230,4 +236,15 @@ def test_multi_target_kinds(client, auth, mock_scan):
     scan_id = int(r.headers["location"].split("/")[-1])
     scan = db.query(Scan).filter_by(id=scan_id).first()
     assert scan.module == "web"
+
+    r = client.post(
+        f"/admin/endpoints/{contract.id}/scan",
+        data={"profile": "Free"},
+        auth=auth,
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    c_scan_id = int(r.headers["location"].split("/")[-1])
+    c_scan = db.query(Scan).filter_by(id=c_scan_id).first()
+    assert c_scan.module == "contract"
     db.close()
