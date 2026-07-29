@@ -4,12 +4,12 @@
 
 | Piece | Status | Location |
 |---|---|---|
-| RPC scanner CLI | **Done** | `scanner/` |
-| Console, persistence, reports | **Done** (RPC-focused) | `app/` |
-| ChainList discovery (optional inventory) | Present | `app/` — de-emphasize per #38 |
-| Web scanner | Planned | #34 |
-| Smart contract scanner | Planned | #35 |
-| Multi-target projects + unified reports | Planned | #32, #37 |
+| RPC scanner CLI | **Done** (Deep profile enriched) | `scanner/` |
+| Console, persistence, reports | **Done** | `app/` |
+| ChainList discovery (optional inventory) | Present | `app/` — optional |
+| Web scanner | **Done** | #34 |
+| Smart contract scanner | **Done** | #35 |
+| Multi-target projects + unified reports | **Done** | #32, #37 |
 
 Product scope: [FEATURE_LIST.md](FEATURE_LIST.md) (personal tool — no SaaS/marketing).  
 Backlog: [GitHub issues](https://github.com/ehsanhajian/dapptility/issues) (label `personal-tool`).

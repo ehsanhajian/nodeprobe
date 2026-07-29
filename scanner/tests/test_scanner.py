@@ -130,7 +130,9 @@ def test_scan_happy_path_with_admin_exposure():
             return rpc_result(req_id, "Geth/v1.13.0")
         if method == "admin_nodeInfo":
             return rpc_result(req_id, {"name": "node"})
-        if method.startswith(("debug_", "trace_", "personal_", "txpool_", "engine_")):
+        if method.startswith(("debug_", "trace_", "personal_", "txpool_", "engine_", "miner_", "clique_")):
+            return rpc_error(req_id, -32601, "the method does not exist")
+        if method in {"eth_accounts", "rpc_modules"}:
             return rpc_error(req_id, -32601, "the method does not exist")
         if method in {"eth_getBalance", "eth_call"}:
             return rpc_result(req_id, "0x0")
@@ -228,3 +230,97 @@ def test_cli_rules(capsys):
     ids = {r["rule_id"] for r in data}
     assert "EVM-IDENT-001" in ids
     assert "EVM-NS-ADMIN" in ids
+    assert "EVM-CLIENT-003" in ids
+    assert "EVM-RATE-001" in ids
+
+
+def _rich_rpc_handler(request: httpx.Request) -> httpx.Response:
+    body = json.loads(request.content.decode())
+    method = body["method"]
+    req_id = body["id"]
+    if method == "eth_chainId":
+        return rpc_result(req_id, "0x1")
+    if method == "net_version":
+        return rpc_result(req_id, "1")
+    if method == "eth_blockNumber":
+        return rpc_result(req_id, "0x10")
+    if method == "eth_gasPrice":
+        return rpc_result(req_id, "0x1")
+    if method == "web3_clientVersion":
+        return rpc_result(req_id, "Geth/v1.10.26-stable")
+    if method == "rpc_modules":
+        return rpc_result(req_id, {"eth": "1.0", "net": "1.0", "debug": "1.0", "admin": "1.0"})
+    if method == "admin_nodeInfo":
+        return rpc_result(req_id, {"name": "node"})
+    if method == "debug_traceBlockByNumber":
+        return rpc_error(req_id, -32602, "missing value")
+    if method == "debug_memStats":
+        return rpc_result(req_id, {"HeapAlloc": 1})
+    if method == "eth_accounts":
+        return rpc_result(req_id, [])
+    if method.startswith(("trace_", "personal_", "txpool_", "engine_", "miner_", "clique_")):
+        return rpc_error(req_id, -32601, "the method does not exist")
+    if method in {"eth_getBalance", "eth_call"}:
+        return rpc_result(req_id, "0x0")
+    if method == "eth_sendRawTransaction":
+        return rpc_error(req_id, -32602, "invalid raw transaction")
+    return rpc_error(req_id, -32601, "the method does not exist")
+
+
+def test_deep_richer_than_quick():
+    quick_client = httpx.Client(transport=make_transport(_rich_rpc_handler))
+    deep_client = httpx.Client(transport=make_transport(_rich_rpc_handler))
+
+    quick = ScannerEngine(
+        "https://rpc.example/v1",
+        "Quick",
+        http_client=quick_client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+    deep = ScannerEngine(
+        "https://rpc.example/v1",
+        "Deep",
+        http_client=deep_client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+    quick_client.close()
+    deep_client.close()
+
+    assert not quick.aborted and not deep.aborted
+    quick_ids = {f.rule_id for f in quick.findings}
+    deep_ids = {f.rule_id for f in deep.findings}
+    assert "EVM-NS-ADMIN" in quick_ids
+    assert "EVM-CLIENT-003" not in quick_ids  # Deep-only
+    assert "EVM-RATE-001" not in quick_ids
+    assert "EVM-CLIENT-003" in deep_ids
+    assert "EVM-RATE-001" in deep_ids or any(
+        f.rule_id == "EVM-RATE-001" for f in deep.findings + deep.expected_surface
+    )
+    # Deep client fingerprint elevates old Geth
+    assert any(
+        f.rule_id == "EVM-CLIENT-001" and f.severity.value == "Medium" for f in deep.findings
+    )
+    assert deep.requests_made > quick.requests_made
+    # Deep debug confirm path
+    debug = next(f for f in deep.findings if f.rule_id == "EVM-NS-DEBUG")
+    assert debug.evidence.get("deep_confirm_available") is True
+
+
+def test_provider_informational_when_not_blocked():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _rich_rpc_handler(request)
+
+    client = httpx.Client(transport=make_transport(handler))
+    result = ScannerEngine(
+        "https://eth-mainnet.g.alchemy.com/v2/demo",
+        "Quick",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+        block_providers=False,
+    ).run()
+    client.close()
+    assert not result.aborted
+    assert any(f.rule_id == "EVM-PROV-001" for f in result.findings)

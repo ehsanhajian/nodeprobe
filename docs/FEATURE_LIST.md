@@ -87,7 +87,7 @@ Keep and improve the current EVM JSON-RPC engine:
 - Expected public surface vs privileged namespaces
 - TLS / CORS / HTTP hygiene on the RPC URL
 - Third-party provider detection (informational for personal use; optional skip)
-- Deeper Authorized/Deep rules over time (rate-limit behavior, expensive namespaces when explicitly allowed)
+- Deeper Deep-profile RPC rules: expanded namespaces, rpc_modules, client version risk notes, light rate-limit observation, informational provider detection
 - WebSocket RPC (later)
 
 CLI: `dapptility-scan scan <rpc-url> ...`
