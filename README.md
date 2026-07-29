@@ -59,6 +59,15 @@ See [app/README.md](app/README.md) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md
 
 Public self-service and payments land in later milestones.
 
+### Production (Docker + Caddy)
+
+```bash
+cp .env.example .env   # set admin password and secrets
+docker compose up -d --build
+```
+
+HTTPS via Caddy on `dapptility.com`. See [docs/DOCKER.md](docs/DOCKER.md).
+
 ## Policies
 
 Legal and policy pages (Terms, Privacy, Acceptable Use, Scan Safety) will be added before public launch.

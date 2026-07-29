@@ -1,0 +1,48 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dapptility-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DAPPILITY_DATABASE_URL: sqlite:////data/dapptility.db
+      DAPPILITY_DATA_DIR: /data
+    volumes:
+      - dapptility-data:/data
+    networks:
+      - web
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: dapptility-caddy
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    env_file:
+      - .env
+    environment:
+      DAPPILITY_DOMAIN: ${DAPPILITY_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - web
+
+volumes:
+  dapptility-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  web:
+    driver: bridge

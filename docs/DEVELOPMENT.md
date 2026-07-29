@@ -152,7 +152,9 @@ Repository: https://github.com/ehsanhajian/dapptility
 ```bash
 git checkout -b feature/my-change
 # ... edit ...
-pytest -q   # from scanner/ with venv active
+pytest -q   # from scanner/ and app/ with venv active
+# or in production:
+docker compose up -d --build
 git add -A && git commit -m "..."
 git push -u origin feature/my-change
 gh pr create

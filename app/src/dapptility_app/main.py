@@ -19,6 +19,10 @@ def create_app() -> FastAPI:
     def root():
         return RedirectResponse("/admin")
 
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}
+
     @app.on_event("startup")
     def purge_expired_evidence():
         db = SessionLocal()
