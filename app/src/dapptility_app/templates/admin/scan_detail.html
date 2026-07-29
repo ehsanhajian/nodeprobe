@@ -1,65 +1,103 @@
 {% extends "admin/base.html" %}
 {% block title %}Scan #{{ scan.id }} — Dapptility{% endblock %}
+{% block nav_projects %}active{% endblock %}
 {% block content %}
-<h1>Scan #{{ scan.id }}</h1>
-<p class="muted">
-  {{ scan.endpoint.project.name }} · {{ scan.endpoint.url }} · {{ scan.profile }} · {{ scan.status }}
-</p>
-<div class="grid">
-  <div class="card"><div class="muted">Score</div><div class="stat">{{ scan.score if scan.score is not none else '—' }}</div></div>
-  <div class="card"><div class="muted">Chain</div><div class="stat" style="font-size:1rem;">{{ scan.network_name or '—' }}</div></div>
-  <div class="card"><div class="muted">Requests</div><div class="stat">{{ scan.requests_made }}</div></div>
+<div class="page-header">
+  <div>
+    <h1>Scan #{{ scan.id }}</h1>
+    <p class="subtitle muted">
+      <a href="/admin/projects/{{ scan.endpoint.project.id }}">{{ scan.endpoint.project.name }}</a>
+      · <span class="font-mono">{{ scan.endpoint.url }}</span>
+    </p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="/admin/projects/{{ scan.endpoint.project.id }}">← Back to project</a>
 </div>
+
+<div class="grid" style="margin-bottom:1.25rem;">
+  <div class="card" style="margin:0;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Security score</div>
+    <div class="stat">{{ scan.score if scan.score is not none else '—' }}</div>
+  </div>
+  <div class="card" style="margin:0;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Profile</div>
+    <div style="margin-top:0.35rem;"><span class="badge info" style="font-size:0.8rem;">{{ scan.profile }}</span></div>
+  </div>
+  <div class="card" style="margin:0;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Chain</div>
+    <div class="stat" style="font-size:1rem;">{{ scan.network_name or '—' }}</div>
+  </div>
+  <div class="card" style="margin:0;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Requests made</div>
+    <div class="stat">{{ scan.requests_made }}</div>
+  </div>
+</div>
+
 {% if raw_available %}
-<p><a href="/admin/scans/{{ scan.id }}/raw" target="_blank">View raw JSON (admin only, retention limited)</a></p>
+<p style="margin-bottom:1rem;"><a href="/admin/scans/{{ scan.id }}/raw" target="_blank" class="text-sm">View raw scan JSON</a></p>
 {% endif %}
+
 <div class="card">
   <h2>Findings</h2>
   {% if scan.profile == 'Outbound' %}
-  <p class="muted">Outbound: confirm findings before publishing a report.</p>
+  <p class="muted text-sm" style="margin-bottom:0.75rem;">Outbound scan — confirm or reject findings before publishing a report.</p>
   {% endif %}
   <table>
-    <tr><th>Severity</th><th>Title</th><th>Status</th><th>Review</th></tr>
+    <thead>
+      <tr><th>Severity</th><th>Finding</th><th>Status</th><th>Review</th></tr>
+    </thead>
+    <tbody>
     {% for f in scan.findings if f.kind != 'expected_surface' %}
     <tr>
       <td><span class="badge {{ f.severity|lower }}">{{ f.severity }}</span></td>
-      <td><strong>{{ f.title }}</strong><br><span class="muted">{{ f.description }}</span></td>
-      <td>{{ f.status }}</td>
       <td>
-        <form method="post" action="/admin/findings/{{ f.id }}/status">
-          <select name="status" style="width:auto;display:inline-block;">
-            <option value="open" {% if f.status=='open' %}selected{% endif %}>open</option>
-            <option value="confirmed" {% if f.status=='confirmed' %}selected{% endif %}>confirmed</option>
-            <option value="false_positive" {% if f.status=='false_positive' %}selected{% endif %}>false_positive</option>
-            <option value="rejected" {% if f.status=='rejected' %}selected{% endif %}>rejected</option>
+        <strong style="font-size:0.9rem;">{{ f.title }}</strong>
+        <div class="muted text-sm" style="margin-top:0.15rem;">{{ f.description }}</div>
+      </td>
+      <td><span class="status-pill {{ f.status }}">{{ f.status }}</span></td>
+      <td>
+        <form method="post" action="/admin/findings/{{ f.id }}/status" class="form-inline">
+          <select name="status" style="width:auto;min-width:7.5rem;">
+            <option value="open" {% if f.status=='open' %}selected{% endif %}>Open</option>
+            <option value="confirmed" {% if f.status=='confirmed' %}selected{% endif %}>Confirmed</option>
+            <option value="false_positive" {% if f.status=='false_positive' %}selected{% endif %}>False positive</option>
+            <option value="rejected" {% if f.status=='rejected' %}selected{% endif %}>Rejected</option>
           </select>
-          <input name="reviewer_note" placeholder="Note" style="width:auto;display:inline-block;">
-          <button class="btn secondary" type="submit">Save</button>
+          <input name="reviewer_note" placeholder="Note (optional)" style="width:auto;min-width:8rem;">
+          <button class="btn btn-secondary btn-sm" type="submit">Save</button>
         </form>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="muted">No security findings.</td></tr>
+    <tr><td colspan="4" class="muted" style="text-align:center;padding:1.25rem;">No security findings.</td></tr>
     {% endfor %}
+    </tbody>
   </table>
 </div>
+
 <div class="card">
   <h2>Expected surface</h2>
-  <ul>
-    {% for f in scan.findings if f.kind == 'expected_surface' %}
-    <li>{{ f.title }} — {{ f.description }}</li>
-    {% else %}
-    <li class="muted">None recorded.</li>
+  {% set surface_findings = scan.findings|selectattr('kind', 'equalto', 'expected_surface')|list %}
+  {% if surface_findings %}
+  <ul style="margin:0;padding-left:1.1rem;">
+    {% for f in surface_findings %}
+    <li class="text-sm" style="margin-bottom:0.3rem;">{{ f.title }} — <span class="muted">{{ f.description }}</span></li>
     {% endfor %}
   </ul>
+  {% else %}
+  <p class="muted text-sm">None recorded.</p>
+  {% endif %}
 </div>
+
 <div class="card">
   <h2>Create report</h2>
   <form method="post" action="/admin/scans/{{ scan.id }}/report">
-    <label>Title</label>
-    <input name="title" value="Preliminary RPC Security Assessment — {{ scan.endpoint.project.name }}" required>
+    <label>Report title</label>
+    <input name="title" value="Preliminary RPC Security Assessment — {{ scan.endpoint.project.name }}" required style="max-width:560px;">
     <input type="hidden" name="report_type" value="preliminary">
-    <button class="btn" type="submit">Build draft report</button>
+    <button class="btn btn-primary" type="submit" style="margin-top:0.25rem;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Build draft report
+    </button>
   </form>
 </div>
 {% endblock %}

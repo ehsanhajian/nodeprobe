@@ -1,32 +1,55 @@
 {% extends "admin/base.html" %}
 {% block title %}Dashboard — Dapptility{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
 {% block content %}
-<h1>Dashboard</h1>
-<div class="grid">
-  <div class="card"><div class="muted">Projects</div><div class="stat">{{ stats.projects }}</div></div>
-  <div class="card"><div class="muted">Discovery (new)</div><div class="stat">{{ stats.discovery_new }}</div></div>
-  <div class="card"><div class="muted">Scans</div><div class="stat">{{ stats.scans }}</div></div>
-  <div class="card"><div class="muted">Completed</div><div class="stat">{{ stats.completed_scans }}</div></div>
-  <div class="card"><div class="muted">Reports</div><div class="stat">{{ stats.reports }}</div></div>
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="subtitle muted">Overview of your scanner operations and discovery pipeline.</p>
+  </div>
 </div>
-<div class="card" style="margin-top:1rem;">
-  <p><a href="/admin/discovery">Open discovery inbox</a> — {{ stats.discovery_promoted }} promoted from {{ stats.discovery_runs }} runs.</p>
+
+<div class="grid" style="margin-bottom:1.25rem;">
+  <div class="card" style="margin:0;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Projects</div>
+    <div class="stat">{{ stats.projects }}</div>
+  </div>
+  <div class="card" style="margin:0;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Discovery leads</div>
+    <div class="stat">{{ stats.discovery_new }}</div>
+    <div class="muted text-xs" style="margin-top:0.2rem;">{{ stats.discovery_promoted }} promoted · {{ stats.discovery_runs }} runs</div>
+  </div>
+  <div class="card" style="margin:0;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Scans</div>
+    <div class="stat">{{ stats.scans }}</div>
+    <div class="muted text-xs" style="margin-top:0.2rem;">{{ stats.completed_scans }} completed</div>
+  </div>
+  <div class="card" style="margin:0;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Reports</div>
+    <div class="stat">{{ stats.reports }}</div>
+    <div class="muted text-xs" style="margin-top:0.2rem;">{{ stats.published_reports }} published</div>
+  </div>
 </div>
+
 <div class="card">
   <h2>Recent scans</h2>
   <table>
-    <tr><th>ID</th><th>Project</th><th>Profile</th><th>Status</th><th>Score</th></tr>
+    <thead>
+      <tr><th>ID</th><th>Project</th><th>Profile</th><th>Status</th><th>Score</th></tr>
+    </thead>
+    <tbody>
     {% for scan in recent_scans %}
     <tr>
       <td><a href="/admin/scans/{{ scan.id }}">#{{ scan.id }}</a></td>
       <td>{{ scan.endpoint.project.name }}</td>
-      <td>{{ scan.profile }}</td>
-      <td>{{ scan.status }}</td>
-      <td>{{ scan.score if scan.score is not none else '—' }}</td>
+      <td><span class="badge info">{{ scan.profile }}</span></td>
+      <td><span class="status-pill {{ scan.status }}">{{ scan.status }}</span></td>
+      <td>{% if scan.score is not none %}<strong>{{ scan.score }}</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
     </tr>
     {% else %}
-    <tr><td colspan="5" class="muted">No scans yet.</td></tr>
+    <tr><td colspan="5" class="muted" style="text-align:center;padding:1.5rem;">No scans yet. Create a project and run your first scan.</td></tr>
     {% endfor %}
+    </tbody>
   </table>
 </div>
 {% endblock %}

@@ -1,57 +1,86 @@
 {% extends "admin/base.html" %}
 {% block title %}{{ project.name }} — Dapptility{% endblock %}
+{% block nav_projects %}active{% endblock %}
 {% block content %}
-<h1>{{ project.name }}</h1>
-<p class="muted">{{ project.website or 'No website' }} · Lead score {{ project.lead_score }}</p>
+<div class="page-header">
+  <div>
+    <h1>{{ project.name }}</h1>
+    <p class="subtitle muted">
+      {% if project.website %}<a href="{{ project.website }}" target="_blank" rel="noopener">{{ project.website }}</a> · {% endif %}
+      Lead score {{ project.lead_score }}
+      {% if project.network_type %} · {{ project.network_type }}{% endif %}
+      {% if project.launch_stage %} · {{ project.launch_stage }}{% endif %}
+    </p>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="/admin/projects">← All projects</a>
+</div>
+
 <div class="card">
   <h2>Endpoints</h2>
   <table>
-    <tr><th>URL</th><th>Provider</th><th>Actions</th></tr>
+    <thead>
+      <tr><th>RPC URL</th><th>Provider</th><th>Scan</th></tr>
+    </thead>
+    <tbody>
     {% for ep in endpoints %}
     <tr>
-      <td>{{ ep.url }}</td>
-      <td>{% if ep.is_third_party_provider %}<span class="badge">{{ ep.provider_name }}</span>{% else %}—{% endif %}</td>
+      <td><span class="font-mono text-sm">{{ ep.url }}</span></td>
+      <td>{% if ep.is_third_party_provider %}<span class="badge warn">{{ ep.provider_name }}</span>{% else %}<span class="badge ok">Own domain</span>{% endif %}</td>
       <td>
         {% if not ep.is_third_party_provider %}
-        <form method="post" action="/admin/endpoints/{{ ep.id }}/scan" style="display:inline;">
-          <select name="profile" style="width:auto;display:inline-block;margin:0;">
+        <form method="post" action="/admin/endpoints/{{ ep.id }}/scan" class="form-inline">
+          <select name="profile" style="width:auto;min-width:8rem;">
             <option value="Outbound">Outbound</option>
             <option value="Free">Free</option>
             <option value="Authorized-Full">Authorized-Full</option>
           </select>
-          <button class="btn" type="submit">Run scan</button>
+          <button class="btn btn-primary btn-sm" type="submit">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Run scan
+          </button>
         </form>
         {% else %}
-        <span class="muted">Blocked (third-party)</span>
+        <span class="muted text-sm">Blocked — third-party hosted</span>
         {% endif %}
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="3" class="muted">No endpoints.</td></tr>
+    <tr><td colspan="3" class="muted" style="text-align:center;padding:1.25rem;">No endpoints added yet.</td></tr>
     {% endfor %}
+    </tbody>
   </table>
-  <h3>Add endpoint</h3>
-  <form method="post" action="/admin/projects/{{ project.id }}/endpoints">
-    <input name="url" placeholder="https://rpc.example.com" required>
-    <button class="btn" type="submit">Add HTTP RPC endpoint</button>
+  <form method="post" action="/admin/projects/{{ project.id }}/endpoints" class="form-inline" style="margin-top:1rem;">
+    <input name="url" placeholder="https://rpc.example.com" required style="flex:1;margin:0;">
+    <button class="btn btn-secondary btn-sm" type="submit">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add endpoint
+    </button>
   </form>
 </div>
+
 <div class="card">
   <h2>Reports</h2>
   <table>
-    <tr><th>Title</th><th>Status</th><th>Link</th></tr>
+    <thead>
+      <tr><th>Title</th><th>Status</th><th>Private link</th></tr>
+    </thead>
+    <tbody>
     {% for report in reports %}
     <tr>
       <td><a href="/admin/reports/{{ report.id }}">{{ report.title }}</a></td>
-      <td>{{ report.status }}</td>
-      <td>{% if report.status == 'published' %}<a href="/r/{{ report.token }}">/r/{{ report.token[:12] }}…</a>{% else %}—{% endif %}</td>
+      <td><span class="status-pill {{ report.status }}">{{ report.status }}</span></td>
+      <td>{% if report.status == 'published' %}<a href="/r/{{ report.token }}" class="font-mono text-sm">/r/{{ report.token[:12] }}…</a>{% else %}<span class="muted">—</span>{% endif %}</td>
     </tr>
     {% else %}
-    <tr><td colspan="3" class="muted">No reports yet.</td></tr>
+    <tr><td colspan="3" class="muted" style="text-align:center;padding:1.25rem;">No reports yet. Run a scan first.</td></tr>
     {% endfor %}
+    </tbody>
   </table>
 </div>
-<form method="post" action="/admin/projects/{{ project.id }}/archive">
-  <button class="btn danger" type="submit">Archive project</button>
-</form>
+
+<div style="margin-top:1.5rem;">
+  <form method="post" action="/admin/projects/{{ project.id }}/archive" onsubmit="return confirm('Archive this project? This cannot be undone.');">
+    <button class="btn btn-ghost btn-sm" type="submit" style="color:var(--danger);">Archive project</button>
+  </form>
+</div>
 {% endblock %}

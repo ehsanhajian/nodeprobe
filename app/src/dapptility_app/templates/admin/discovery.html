@@ -1,111 +1,106 @@
 {% extends "admin/base.html" %}
 {% block title %}Discovery — Dapptility{% endblock %}
+{% block nav_discovery %}active{% endblock %}
 {% block content %}
 <div class="discovery-page">
 
 <div class="page-header">
   <div>
     <h1>Discovery inbox</h1>
-    <p class="subtitle muted">New EVM networks and RPC endpoints from ChainList, scored for outbound outreach.</p>
+    <p class="subtitle muted">New EVM mainnet networks and RPC endpoints from ChainList, scored for outbound outreach.</p>
   </div>
   <form method="post" action="/admin/discovery/run">
-    <button class="btn" type="submit">Run discovery now</button>
+    <button class="btn btn-primary" type="submit">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+      Sync now
+    </button>
   </form>
 </div>
 
 <div class="grid" style="margin-bottom:1rem;">
   <div class="card" style="margin:0;">
-    <div class="muted">New leads</div>
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">New leads</div>
     <div class="stat">{{ status_counts.new }}</div>
   </div>
   <div class="card" style="margin:0;">
-    <div class="muted">Promoted</div>
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Promoted</div>
     <div class="stat">{{ status_counts.promoted }}</div>
   </div>
   <div class="card" style="margin:0;">
-    <div class="muted">Dismissed</div>
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Dismissed</div>
     <div class="stat">{{ status_counts.dismissed }}</div>
   </div>
   <div class="card" style="margin:0;">
-    <div class="muted">Last sync</div>
-    <div class="stat" style="font-size:1rem;line-height:1.4;padding-top:0.4rem;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Last sync</div>
+    <div style="margin-top:0.3rem;">
       {% if last_run and last_run.finished_at %}
-        {{ last_run.finished_at.strftime('%b %d, %H:%M UTC') }}
-        <div class="muted" style="font-size:0.8rem;font-weight:400;">{{ last_run.leads_new }} new · {{ last_run.leads_promoted }} auto-promoted</div>
+        <div style="font-weight:600;font-size:0.95rem;">{{ last_run.finished_at.strftime('%b %d, %H:%M UTC') }}</div>
+        <div class="muted text-xs" style="margin-top:0.15rem;">{{ last_run.leads_new }} new · {{ last_run.leads_promoted }} auto-promoted</div>
       {% else %}
-        <span class="muted" style="font-size:0.95rem;">Not run yet</span>
+        <span class="muted" style="font-size:0.9rem;">Not synced yet</span>
       {% endif %}
     </div>
   </div>
 </div>
 
-<div class="info-panel">
-  <h3>How this works</h3>
-  <div class="info-grid">
+<details class="info-panel" style="cursor:default;">
+  <summary style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-weight:600;cursor:pointer;">How scoring works</summary>
+  <div class="info-grid" style="margin-top:0.75rem;">
     <div class="info-item">
       <strong>Lead score (0–100)</strong>
       <p>
-        An automated outreach priority score. Higher = more likely a project-run RPC worth contacting.
-        Own-domain RPC (+35), mainnet (+25), HTTPS (+10), and domain alignment (+15) increase the score.
-        Testnets (−25) and known providers like Alchemy (−50) lower it.
-        Scores <strong>≥ 70</strong> are auto-promoted to projects.
+        Automated outreach priority. Own-domain RPC (+35), mainnet (+25), HTTPS (+10), domain alignment (+15), new discovery (+20).
+        Known providers like Alchemy (−50) are scored low. Leads <strong>≥ 70</strong> are auto-promoted.
       </p>
     </div>
     <div class="info-item">
-      <strong>Promote</strong>
+      <strong>Promote → project</strong>
       <p>
-        Creates an <em>outbound project</em> with this chain's RPC endpoint pre-filled,
-        so you can run a limited scan, review findings, and draft outreach.
-        Use this when a lead looks worth pursuing manually.
+        Creates an outbound project with the RPC endpoint pre-filled.
+        You can then run a limited scan, review findings, and draft outreach.
       </p>
     </div>
     <div class="info-item">
       <strong>Dismiss</strong>
       <p>
-        Hides the lead from the New queue without creating a project.
-        Dismissed leads stay in ChainList sync but won't clutter your inbox.
+        Hides the lead from the inbox. It stays in sync so
+        it won't reappear as new, but won't clutter your queue.
       </p>
     </div>
   </div>
-</div>
+</details>
 
 <div class="card">
   <nav class="tabs" aria-label="Filter by status">
-    {% set tabs = [
-      ('new', 'New'),
-      ('promoted', 'Promoted'),
-      ('dismissed', 'Dismissed'),
-      ('all', 'All'),
-    ] %}
+    {% set tabs = [('new', 'New'), ('promoted', 'Promoted'), ('dismissed', 'Dismissed'), ('all', 'All')] %}
     {% for tab_status, tab_label in tabs %}
     <a href="/admin/discovery?status={{ tab_status }}&page=1"
        class="tab {% if status == tab_status %}active{% endif %}">
-      {{ tab_label }}<span class="count">({{ status_counts[tab_status] }})</span>
+      {{ tab_label }} <span class="count">({{ status_counts[tab_status] }})</span>
     </a>
     {% endfor %}
   </nav>
 
   <div class="table-meta">
-    <span class="muted">
+    <span class="muted text-sm">
       {% if total == 0 %}
         No leads in this view
       {% else %}
-        Showing {{ (page - 1) * page_size + 1 }}–{{ [page * page_size, total]|min }} of {{ total }}
-        · sorted by score (highest first)
+        {{ (page - 1) * page_size + 1 }}–{{ [page * page_size, total]|min }} of {{ total }} · highest score first
       {% endif %}
     </span>
-    <span class="muted">Page {{ page }} of {{ total_pages }}</span>
+    <span class="muted text-sm">Page {{ page }} / {{ total_pages }}</span>
   </div>
 
   <table>
     <thead>
       <tr>
-        <th style="width:4.5rem;">Score</th>
+        <th style="width:4rem;">Score</th>
         <th>Network</th>
         <th>RPC endpoint</th>
         <th>Signals</th>
-        <th style="width:5.5rem;">Status</th>
-        <th style="width:8rem;">Actions</th>
+        <th style="width:5rem;">Status</th>
+        <th style="width:9rem;">Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -113,25 +108,22 @@
     {% set tier = lead.lead_score|score_tier %}
     <tr>
       <td>
-        <div class="score-badge {{ tier }}" title="Lead score: outreach priority 0–100">
+        <div class="score-badge {{ tier }}" title="Outreach priority score 0–100">
           <span class="value">{{ lead.lead_score }}</span>
           <span class="tier">{{ tier }}</span>
         </div>
       </td>
       <td>
         <div class="network-name">{{ lead.chain_name }}</div>
-        <div class="network-meta muted">
-          Chain ID {{ lead.chain_id }}
-          {% if lead.is_testnet %}<span class="badge warn">Testnet</span>{% else %}<span class="badge ok">Mainnet</span>{% endif %}
-        </div>
+        <div class="network-meta muted">Chain ID {{ lead.chain_id }}</div>
         {% if lead.website %}
-        <div class="network-meta"><a href="{{ lead.website }}" target="_blank" rel="noopener">{{ lead.website }}</a></div>
+        <div class="network-meta"><a href="{{ lead.website }}" target="_blank" rel="noopener" class="text-sm">{{ lead.website }}</a></div>
         {% endif %}
       </td>
       <td>
         <div class="rpc-url">{{ lead.rpc_url }}</div>
         {% if lead.is_third_party_provider %}
-        <div style="margin-top:0.35rem;"><span class="badge warn">{{ lead.provider_name or 'Third-party' }}</span></div>
+        <div style="margin-top:0.3rem;"><span class="badge warn">{{ lead.provider_name or 'Third-party' }}</span></div>
         {% endif %}
       </td>
       <td>
@@ -149,24 +141,25 @@
         {% endfor %}
         </div>
       </td>
+      <td><span class="status-pill {{ lead.status }}">{{ lead.status }}</span></td>
       <td>
-        <span class="status-pill {{ lead.status }}">{{ lead.status }}</span>
-      </td>
-      <td>
-        <div class="actions">
+        <div class="actions-col">
         {% if lead.status == 'new' and not lead.is_third_party_provider %}
         <form method="post" action="/admin/discovery/{{ lead.id }}/promote">
-          <button class="btn sm" type="submit" title="Create outbound project with this RPC">Promote to project</button>
+          <button class="btn btn-primary btn-sm" type="submit" title="Create outbound project with this RPC" style="width:100%;">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/></svg>
+            Promote
+          </button>
         </form>
         <form method="post" action="/admin/discovery/{{ lead.id }}/dismiss">
           <input type="hidden" name="status" value="{{ status }}">
           <input type="hidden" name="page" value="{{ page }}">
-          <button class="btn sm ghost" type="submit">Dismiss</button>
+          <button class="btn btn-ghost btn-sm" type="submit" style="width:100%;">Dismiss</button>
         </form>
         {% elif lead.project_id %}
-        <a class="btn sm secondary" href="/admin/projects/{{ lead.project_id }}">View project</a>
+        <a class="btn btn-secondary btn-sm" href="/admin/projects/{{ lead.project_id }}" style="width:100%;text-align:center;">View project</a>
         {% elif lead.is_third_party_provider %}
-        <span class="muted" style="font-size:0.8rem;">Provider-hosted — cannot promote</span>
+        <span class="muted text-xs">Provider-hosted</span>
         {% else %}
         <span class="muted">—</span>
         {% endif %}
@@ -175,9 +168,9 @@
     </tr>
     {% else %}
     <tr>
-      <td colspan="6" style="padding:2rem;text-align:center;" class="muted">
-        No leads in this view.
-        {% if status == 'new' %}Click <strong>Run discovery now</strong> to import from ChainList.{% endif %}
+      <td colspan="6" style="padding:2.5rem;text-align:center;" class="muted">
+        {% if status == 'new' %}No new leads. Click <strong>Sync now</strong> to import from ChainList.
+        {% else %}No leads in this view.{% endif %}
       </td>
     </tr>
     {% endfor %}
@@ -186,15 +179,11 @@
 
   {% if total_pages > 1 %}
   <nav class="pagination" aria-label="Pagination">
-    <div class="muted" style="font-size:0.85rem;">
-      {{ page_size }} per page
-    </div>
+    <div class="muted text-sm">{{ page_size }} per page</div>
     <div class="pages">
       {% if page > 1 %}
-      <a class="page-link" href="/admin/discovery?status={{ status }}&page={{ page - 1 }}" aria-label="Previous page">‹</a>
-      {% else %}
-      <span class="page-link disabled">‹</span>
-      {% endif %}
+      <a class="page-link" href="/admin/discovery?status={{ status }}&page={{ page - 1 }}">‹</a>
+      {% else %}<span class="page-link disabled">‹</span>{% endif %}
 
       {% set window = 2 %}
       {% set start_page = [1, page - window]|max %}
@@ -206,8 +195,7 @@
       {% endif %}
 
       {% for p in range(start_page, end_page + 1) %}
-      <a class="page-link {% if p == page %}active{% endif %}"
-         href="/admin/discovery?status={{ status }}&page={{ p }}">{{ p }}</a>
+      <a class="page-link {% if p == page %}active{% endif %}" href="/admin/discovery?status={{ status }}&page={{ p }}">{{ p }}</a>
       {% endfor %}
 
       {% if end_page < total_pages %}
@@ -216,46 +204,33 @@
       {% endif %}
 
       {% if page < total_pages %}
-      <a class="page-link" href="/admin/discovery?status={{ status }}&page={{ page + 1 }}" aria-label="Next page">›</a>
-      {% else %}
-      <span class="page-link disabled">›</span>
-      {% endif %}
+      <a class="page-link" href="/admin/discovery?status={{ status }}&page={{ page + 1 }}">›</a>
+      {% else %}<span class="page-link disabled">›</span>{% endif %}
     </div>
   </nav>
   {% endif %}
 </div>
 
-<details class="card" style="cursor:pointer;">
-  <summary style="font-weight:600;cursor:pointer;">Recent discovery runs</summary>
+<details class="card">
+  <summary style="font-weight:600;font-size:0.9rem;cursor:pointer;">Recent sync runs</summary>
   <table class="runs-table" style="margin-top:0.75rem;">
     <thead>
-      <tr>
-        <th>Run</th><th>Status</th><th>Chains</th><th>RPCs scanned</th>
-        <th>New</th><th>Updated</th><th>Auto-promoted</th><th>Started</th>
-      </tr>
+      <tr><th>Run</th><th>Status</th><th>Chains</th><th>RPCs</th><th>New</th><th>Updated</th><th>Auto-promoted</th><th>Started</th></tr>
     </thead>
     <tbody>
     {% for run in runs %}
     <tr>
       <td>#{{ run.id }}</td>
-      <td>
-        {% if run.status == 'completed' %}
-        <span class="badge ok">{{ run.status }}</span>
-        {% elif run.status == 'failed' %}
-        <span class="badge critical">{{ run.status }}</span>
-        {% else %}
-        <span class="badge neutral">{{ run.status }}</span>
-        {% endif %}
-      </td>
+      <td><span class="badge {{ 'ok' if run.status == 'completed' else ('critical' if run.status == 'failed' else 'neutral') }}">{{ run.status }}</span></td>
       <td>{{ run.chains_seen }}</td>
       <td>{{ run.rpc_candidates }}</td>
       <td>{{ run.leads_new }}</td>
       <td>{{ run.leads_updated }}</td>
       <td>{{ run.leads_promoted }}</td>
-      <td class="muted">{{ run.started_at.strftime('%Y-%m-%d %H:%M UTC') if run.started_at else '—' }}</td>
+      <td class="muted text-sm">{{ run.started_at.strftime('%Y-%m-%d %H:%M UTC') if run.started_at else '—' }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="8" class="muted">No runs yet.</td></tr>
+    <tr><td colspan="8" class="muted" style="text-align:center;">No runs yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>

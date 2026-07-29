@@ -1,26 +1,47 @@
 {% extends "admin/base.html" %}
 {% block title %}New project — Dapptility{% endblock %}
+{% block nav_projects %}active{% endblock %}
 {% block content %}
-<h1>New project</h1>
-<div class="card">
+<div class="page-header">
+  <div>
+    <h1>New project</h1>
+    <p class="subtitle muted">Create an outbound target to scan and draft outreach for.</p>
+  </div>
+</div>
+<div class="card" style="max-width:640px;">
   <form method="post">
-    <label>Name</label>
-    <input name="name" required>
+    <label>Project name</label>
+    <input name="name" required placeholder="e.g. Arbitrum One">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div>
+        <label>Network type</label>
+        <input name="network_type" placeholder="EVM L2">
+      </div>
+      <div>
+        <label>Project type</label>
+        <input name="project_type" placeholder="rollup">
+      </div>
+    </div>
     <label>Website</label>
     <input name="website" placeholder="https://example.com">
-    <label>Network type</label>
-    <input name="network_type" placeholder="EVM L2">
-    <label>Project type</label>
-    <input name="project_type" placeholder="rollup">
-    <label>Launch stage</label>
-    <input name="launch_stage" placeholder="mainnet">
-    <label>Lead score</label>
-    <input name="lead_score" type="number" value="0">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div>
+        <label>Launch stage</label>
+        <input name="launch_stage" placeholder="mainnet">
+      </div>
+      <div>
+        <label>Lead score</label>
+        <input name="lead_score" type="number" value="0" min="0" max="100">
+      </div>
+    </div>
     <label>Disclosure contact</label>
     <input name="disclosure_contact" placeholder="security@example.com">
     <label>Communication notes</label>
-    <textarea name="communication_notes" rows="3"></textarea>
-    <button class="btn" type="submit">Create project</button>
+    <textarea name="communication_notes" rows="3" placeholder="Internal notes about this project..."></textarea>
+    <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+      <button class="btn btn-primary" type="submit">Create project</button>
+      <a class="btn btn-ghost" href="/admin/projects">Cancel</a>
+    </div>
   </form>
 </div>
 {% endblock %}
