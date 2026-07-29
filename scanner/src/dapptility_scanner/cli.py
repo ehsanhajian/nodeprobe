@@ -24,6 +24,12 @@ CONTRACT_RULE_CATALOG = [
 ]
 
 
+_PROFILE_HELP = (
+    "Scan profile: Quick | Standard | Deep "
+    "(aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep; default: Quick)"
+)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="dapptility-scan",
@@ -33,15 +39,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     scan = sub.add_parser("scan", help="Scan an HTTP JSON-RPC endpoint")
     scan.add_argument("url", help="HTTP(S) JSON-RPC endpoint URL")
-    scan.add_argument(
-        "--profile",
-        default="Free",
-        help="Scan profile: Free | Outbound | Authorized-Full (default: Free)",
-    )
+    scan.add_argument("--profile", default="Quick", help=_PROFILE_HELP)
     scan.add_argument(
         "--block-providers",
         action="store_true",
-        help="Block known third-party provider hostnames (always on for Outbound)",
+        help="Block known third-party provider hostnames (Alchemy, Infura, …)",
     )
     scan.add_argument(
         "--pretty",
@@ -51,11 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     web = sub.add_parser("web", help="Scan a website (HTTP/TLS surface)")
     web.add_argument("url", help="HTTP(S) website URL")
-    web.add_argument(
-        "--profile",
-        default="Free",
-        help="Scan profile: Free | Outbound | Authorized-Full (default: Free)",
-    )
+    web.add_argument("--profile", default="Quick", help=_PROFILE_HELP)
     web.add_argument(
         "--pretty",
         action="store_true",
@@ -66,11 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
     contract.add_argument("address", help="Contract address (0x…)")
     contract.add_argument("--rpc", required=True, help="HTTP(S) JSON-RPC URL for the chain")
     contract.add_argument("--chain", type=int, default=None, help="Expected chain ID")
-    contract.add_argument(
-        "--profile",
-        default="Free",
-        help="Scan profile: Free | Outbound | Authorized-Full (default: Free)",
-    )
+    contract.add_argument("--profile", default="Quick", help=_PROFILE_HELP)
     contract.add_argument(
         "--no-sourcify",
         action="store_true",
@@ -157,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
                     **item,
                     "severity": "varies",
                     "kind": "finding",
-                    "profiles": ["Free", "Outbound", "Authorized-Full"],
+                    "profiles": ["Quick", "Standard", "Deep"],
                 }
                 for item in CONTRACT_RULE_CATALOG
             )

@@ -4,7 +4,7 @@ from dapptility_scanner.models import CheckKind, Confidence, Severity
 from dapptility_scanner.rules.base import Rule, RuleMeta
 
 
-# Presence-only probes — no expensive payloads on Free/Outbound.
+# Presence-only probes — no expensive payloads on Quick/Standard.
 NAMESPACE_PROBES: list[tuple[str, str, Severity, int, str]] = [
     (
         "EVM-NS-DEBUG",
@@ -69,7 +69,7 @@ class NamespaceExposureRule(Rule):
             title=f"Exposed {namespace} namespace",
             description=(
                 f"Presence probe for {method}. Does not execute expensive payloads "
-                "on Free or Outbound profiles."
+                "on Quick or Standard profiles."
             ),
             category="RPC Method Exposure",
             severity=severity,
@@ -93,8 +93,8 @@ class NamespaceExposureRule(Rule):
         params: list = []
         if self.method == "debug_traceBlockByNumber":
             # Still a presence probe; many nodes reject before heavy work if disabled.
-            # Use "latest" with empty tracer config only on Authorized-Full if ever expanded.
-            # For Free/Outbound we call with empty params which typically returns method error
+            # Use "latest" with empty tracer config only on Deep if ever expanded.
+            # For Quick/Standard we call with empty params which typically returns method error
             # without expensive execution when disabled, or a param error when enabled.
             params = []
         available, detail = client.method_available(self.method, params)

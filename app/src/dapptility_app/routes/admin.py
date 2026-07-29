@@ -185,7 +185,7 @@ def project_archive(project_id: int, db: Session = Depends(get_db)):
 @router.post("/endpoints/{endpoint_id}/scan")
 def scan_start(
     endpoint_id: int,
-    profile: str = Form("Outbound"),
+    profile: str = Form("Standard"),
     db: Session = Depends(get_db),
 ):
     endpoint = db.query(Endpoint).filter(Endpoint.id == endpoint_id).first()

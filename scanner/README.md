@@ -22,7 +22,7 @@ dapptility-scan profiles
 # List rules (rpc | web | contract | all)
 dapptility-scan rules --module all
 
-# Scan an RPC endpoint (Free profile by default)
+# Scan an RPC endpoint (Quick profile by default)
 dapptility-scan scan https://rpc.example.com --pretty
 
 # Scan a website
@@ -31,8 +31,8 @@ dapptility-scan web https://example.com --pretty
 # Scan a smart contract (read-only RPC + optional Sourcify)
 dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1 --pretty
 
-# Outbound profile (blocks known third-party RPC providers)
-dapptility-scan scan https://rpc.example.com --profile Outbound --pretty
+# Deep profile + optional third-party provider block
+dapptility-scan scan https://rpc.example.com --profile Deep --block-providers --pretty
 ```
 
 JSON is written to stdout. Exit code `2` means the scan was blocked/aborted for safety (unsafe target, unsupported chain, provider block, or kill switch).
@@ -41,9 +41,9 @@ JSON is written to stdout. Exit code `2` means the scan was blocked/aborted for 
 
 - SSRF / private IP / metadata / localhost blocking
 - Redirect refusal to unsafe targets
-- Per-profile request, RPS, and duration budgets
+- Per-profile request, RPS, and duration budgets (`Quick` / `Standard` / `Deep`)
 - Global kill switch: create `/tmp/dapptility-scan-kill` or set `DAPPILITY_KILL_SWITCH`
-- Presence-only privileged namespace probes on Free/Outbound (no expensive payloads)
+- Presence-only privileged namespace probes on Quick/Standard (no expensive payloads)
 - Expected public surface labeled separately from findings
 
 ## Tests

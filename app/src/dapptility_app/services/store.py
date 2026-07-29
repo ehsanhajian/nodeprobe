@@ -146,6 +146,8 @@ def add_endpoint(
 
 
 def execute_scan(db: Session, endpoint: Endpoint, profile: str) -> Scan:
+    from dapptility_scanner.profiles import normalize_profile_name
+
     module = endpoint.kind if endpoint.kind != "website" else "web"
     if module == "contract":
         if not endpoint.address or not endpoint.url:
@@ -153,10 +155,12 @@ def execute_scan(db: Session, endpoint: Endpoint, profile: str) -> Scan:
     elif not endpoint.url:
         raise ValueError("Target has no URL to scan")
 
+    profile_name = normalize_profile_name(profile).value
+
     scan = Scan(
         endpoint_id=endpoint.id,
         module=module,
-        profile=profile,
+        profile=profile_name,
         status="running",
         started_at=datetime.now(timezone.utc),
     )
@@ -167,7 +171,7 @@ def execute_scan(db: Session, endpoint: Endpoint, profile: str) -> Scan:
     try:
         result = run_scan_for_endpoint(
             endpoint.url,
-            profile,
+            profile_name,
             kind=module,
             address=endpoint.address,
             chain_id=endpoint.chain_id,
@@ -255,9 +259,9 @@ def update_finding_status(
 
 
 def publishable_findings(scan: Scan, profile: str) -> list[Finding]:
-    """Outbound requires confirmed findings; others include open findings."""
+    """Standard (and legacy Outbound) prefer confirmed findings; others include open."""
     findings = [f for f in scan.findings if f.kind != "expected_surface"]
-    if profile == "Outbound":
+    if profile in {"Outbound", "Standard"}:
         return [f for f in findings if f.status == "confirmed"]
     return [f for f in findings if f.status in {"open", "confirmed"}]
 

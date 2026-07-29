@@ -143,7 +143,7 @@ def test_cli_contract_rules(capsys, monkeypatch):
         def run(self):
             return ScanResult(
                 scanner_version="0.1.0",
-                profile=ScanProfile.FREE,
+                profile=ScanProfile.QUICK,
                 endpoint="0xabc@https://rpc.example",
                 started_at="t0",
                 finished_at="t1",

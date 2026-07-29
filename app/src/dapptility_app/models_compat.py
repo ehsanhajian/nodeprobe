@@ -9,10 +9,10 @@ from dapptility_scanner.models import (
     CheckKind,
     Confidence,
     Finding,
-    ScanProfile,
     ScanResult,
     Severity,
 )
+from dapptility_scanner.profiles import normalize_profile_name
 
 
 def make_scan_result(url: str, profile: str) -> ScanResult:
@@ -41,7 +41,7 @@ def make_scan_result(url: str, profile: str) -> ScanResult:
     )
     return ScanResult(
         scanner_version=__version__,
-        profile=ScanProfile(profile),
+        profile=normalize_profile_name(profile),
         endpoint=url,
         started_at=now,
         finished_at=now,

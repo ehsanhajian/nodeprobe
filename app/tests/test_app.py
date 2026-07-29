@@ -92,7 +92,7 @@ def test_project_scan_report_flow(client, auth, mock_scan):
 
     r = client.post(
         f"/admin/endpoints/{endpoint.id}/scan",
-        data={"profile": "Outbound"},
+        data={"profile": "Standard"},
         auth=auth,
         follow_redirects=False,
     )
@@ -142,7 +142,7 @@ def test_raw_evidence_admin_only(client, auth, mock_scan):
     db = database.SessionLocal()
     project = db.query(Project).first()
     endpoint = store.add_endpoint(db, project, "https://rpc.raw.example")
-    scan = store.execute_scan(db, endpoint, "Free")
+    scan = store.execute_scan(db, endpoint, "Quick")
     scan_id = scan.id
     db.close()
 
@@ -150,7 +150,7 @@ def test_raw_evidence_admin_only(client, auth, mock_scan):
     raw = client.get(f"/admin/scans/{scan_id}/raw", auth=auth)
     assert raw.status_code == 200
     data = raw.json()
-    assert data["profile"] == "Free"
+    assert data["profile"] == "Quick"
 
 
 def test_third_party_endpoint_blocked(client, auth):
@@ -171,7 +171,7 @@ def test_third_party_endpoint_blocked(client, auth):
 
     r = client.post(
         f"/admin/endpoints/{endpoint_id}/scan",
-        data={"profile": "Outbound"},
+        data={"profile": "Standard"},
         auth=auth,
     )
     assert r.status_code == 400
@@ -228,7 +228,7 @@ def test_multi_target_kinds(client, auth, mock_scan):
 
     r = client.post(
         f"/admin/endpoints/{web.id}/scan",
-        data={"profile": "Free"},
+        data={"profile": "Quick"},
         auth=auth,
         follow_redirects=False,
     )
@@ -239,7 +239,7 @@ def test_multi_target_kinds(client, auth, mock_scan):
 
     r = client.post(
         f"/admin/endpoints/{contract.id}/scan",
-        data={"profile": "Free"},
+        data={"profile": "Quick"},
         auth=auth,
         follow_redirects=False,
     )

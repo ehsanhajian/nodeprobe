@@ -188,7 +188,7 @@ def promote_lead(
 
     if auto_scan and not endpoint.is_third_party_provider:
         try:
-            scan = store.execute_scan(db, endpoint, "Outbound")
+            scan = store.execute_scan(db, endpoint, "Standard")
             store.log_action(
                 db,
                 "discovery.auto_scan",

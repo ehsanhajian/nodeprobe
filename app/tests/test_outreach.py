@@ -94,7 +94,7 @@ def test_outreach_email_includes_report_link(db):
     endpoint = store.add_endpoint(db, project, "https://rpc.test.example")
     scan = Scan(
         endpoint_id=endpoint.id,
-        profile="Outbound",
+        profile="Standard",
         status="completed",
         score=42,
         chain_id=1,
@@ -131,7 +131,7 @@ def test_outreach_email_includes_report_link(db):
 def test_ensure_published_outreach_report(db):
     project = store.create_project(db, name="Outreach Chain")
     endpoint = store.add_endpoint(db, project, "https://rpc.outreach.example")
-    scan = Scan(endpoint_id=endpoint.id, profile="Outbound", status="completed", score=50)
+    scan = Scan(endpoint_id=endpoint.id, profile="Standard", status="completed", score=50)
     db.add(scan)
     db.commit()
     db.refresh(scan)

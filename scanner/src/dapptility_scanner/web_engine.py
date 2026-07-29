@@ -20,7 +20,7 @@ class WebScannerEngine:
     def __init__(
         self,
         url: str,
-        profile: str | ScanProfile | ProfileLimits = "Free",
+        profile: str | ScanProfile | ProfileLimits = "Quick",
         *,
         http_client: httpx.Client | None = None,
         skip_tls_probe: bool = False,

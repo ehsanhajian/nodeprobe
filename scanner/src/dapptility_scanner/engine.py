@@ -21,7 +21,7 @@ class ScannerEngine:
     def __init__(
         self,
         url: str,
-        profile: str | ScanProfile | ProfileLimits = "Free",
+        profile: str | ScanProfile | ProfileLimits = "Quick",
         *,
         block_providers: bool = False,
         http_client: httpx.Client | None = None,
@@ -58,7 +58,7 @@ class ScannerEngine:
             provider = detect_provider(self.url)
             if provider:
                 provider_name = provider.provider
-                if self.block_providers or self.limits.name == ScanProfile.OUTBOUND:
+                if self.block_providers:
                     finished = datetime.now(timezone.utc)
                     return ScanResult(
                         scanner_version=__version__,

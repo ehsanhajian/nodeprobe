@@ -67,7 +67,7 @@ def test_cli_web_and_rules(capsys, monkeypatch):
         def run(self):
             return ScanResult(
                 scanner_version="0.1.0",
-                profile=ScanProfile.FREE,
+                profile=ScanProfile.QUICK,
                 endpoint="https://example.com",
                 started_at="t0",
                 finished_at="t1",

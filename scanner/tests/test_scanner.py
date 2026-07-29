@@ -87,13 +87,16 @@ def test_provider_detection():
 
 
 def test_profiles():
-    free = get_profile("Free")
-    assert free.max_requests == 40
-    assert free.max_rps == 2.0
-    outbound = get_profile("outbound")
-    assert outbound.max_rps == 1.0
-    full = get_profile("Authorized-Full")
-    assert full.max_requests == 200
+    quick = get_profile("Quick")
+    assert quick.max_requests == 40
+    assert quick.max_rps == 2.0
+    assert get_profile("Free").name.value == "Quick"
+    standard = get_profile("outbound")
+    assert standard.name.value == "Standard"
+    assert standard.max_rps == 3.0
+    deep = get_profile("Authorized-Full")
+    assert deep.name.value == "Deep"
+    assert deep.max_requests == 200
 
 
 def test_scoring_critical_caps():
@@ -179,19 +182,31 @@ def test_unsupported_chain_fails_closed():
     assert any(e.code == "unsupported_chain" for e in result.errors)
 
 
-def test_outbound_blocks_alchemy():
+def test_block_providers_flag():
     result = ScannerEngine(
         "https://eth-mainnet.g.alchemy.com/v2/demo",
-        "Outbound",
+        "Standard",
+        block_providers=True,
     ).run()
     assert result.aborted is True
     assert result.abort_reason == "third_party_provider"
     assert result.provider == "Alchemy"
 
+    # Without the flag, Standard does not auto-block (personal tool)
+    allowed = ScannerEngine(
+        "https://eth-mainnet.g.alchemy.com/v2/demo",
+        "Standard",
+        block_providers=False,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    )
+    # Still constructs; run may fail on network — only assert provider detection path with flag above
+    assert allowed.block_providers is False
+
 
 def test_kill_switch_aborts():
     killswitch.force_kill(True)
-    result = ScannerEngine("https://rpc.example", "Free", skip_tls_probe=True).run()
+    result = ScannerEngine("https://rpc.example", "Quick", skip_tls_probe=True).run()
     assert result.aborted is True
     assert result.abort_reason == "kill_switch"
 
@@ -199,8 +214,11 @@ def test_kill_switch_aborts():
 def test_cli_profiles(capsys):
     assert main(["profiles"]) == 0
     data = json.loads(capsys.readouterr().out)
-    assert "Free" in data
-    assert data["Free"]["max_requests"] == 40
+    assert "Quick" in data
+    assert data["Quick"]["max_requests"] == 40
+    assert "Standard" in data
+    assert "Deep" in data
+    assert "Free" not in data
 
 
 def test_cli_rules(capsys):

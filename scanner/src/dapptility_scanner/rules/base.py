@@ -24,9 +24,9 @@ class RuleMeta:
     remediation: str = ""
     references: list[str] = field(default_factory=list)
     allowed_profiles: tuple[ScanProfile, ...] = (
-        ScanProfile.FREE,
-        ScanProfile.OUTBOUND,
-        ScanProfile.AUTHORIZED_FULL,
+        ScanProfile.QUICK,
+        ScanProfile.STANDARD,
+        ScanProfile.DEEP,
     )
     enabled: bool = True
     score_impact: int = 0

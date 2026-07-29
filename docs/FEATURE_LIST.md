@@ -44,13 +44,13 @@ Discovery sync and outreach drafts that already exist may be kept only if useful
 
 ### 2.2 Scan profiles (personal)
 
-| Profile | Intent | Budgets (starting point) |
+| Profile | Intent | Budgets |
 |---|---|---|
-| `Quick` | Fast pass, low request count | Tight budgets (≈ Free today) |
-| `Standard` | Default personal assessment | Medium budgets |
-| `Deep` | Authorized thorough pass | Higher budgets (≈ Authorized-Full) |
+| `Quick` | Fast pass | ≤40 requests, 2 rps, 60s |
+| `Standard` | Default personal assessment | ≤80 requests, 3 rps, 120s |
+| `Deep` | Thorough authorized pass | ≤200 requests, 5 rps, 300s; expensive namespace calls allowed |
 
-Map existing `Free` / `Outbound` / `Authorized-Full` onto these or keep aliases for compatibility. No paywall gating.
+Aliases for CLI/compat: `Free`→`Quick`, `Outbound`→`Standard`, `Authorized-Full`→`Deep`. No paywall gating.
 
 ### 2.3 Safety (always on)
 

@@ -26,9 +26,9 @@ class CheckKind(str, Enum):
 
 
 class ScanProfile(str, Enum):
-    FREE = "Free"
-    OUTBOUND = "Outbound"
-    AUTHORIZED_FULL = "Authorized-Full"
+    QUICK = "Quick"
+    STANDARD = "Standard"
+    DEEP = "Deep"
 
 
 @dataclass

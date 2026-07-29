@@ -87,7 +87,7 @@
 
 <div class="card">
   <h2>Findings</h2>
-  {% if scan.profile == 'Outbound' %}
+  {% if scan.profile in ['Outbound', 'Standard'] %}
   <p class="muted text-sm" style="margin-bottom:0.75rem;">Review findings and mark false positives before publishing a report.</p>
   {% endif %}
   <table>

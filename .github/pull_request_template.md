@@ -13,8 +13,8 @@
 ## Safety (scanner changes)
 
 - [ ] N/A — no scanner changes
-- [ ] Respects scan profile limits (`Free` / `Outbound` / `Authorized-Full`)
-- [ ] No expensive payloads on Free or Outbound profiles
+- [ ] Respects scan profile limits (`Quick` / `Standard` / `Deep`)
+- [ ] No expensive payloads on Quick or Standard profiles
 - [ ] SSRF / private-IP protections unchanged or improved
 
 ## Test plan

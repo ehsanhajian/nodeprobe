@@ -24,7 +24,7 @@ SCOPE_DID = [
 SCOPE_DID_NOT = [
     "No exploitation or proof-of-compromise actions",
     "No broad port scanning or public load testing",
-    "No expensive debug/trace payloads on Free or Outbound profiles",
+    "No expensive debug/trace payloads on Quick or Standard profiles",
     "No access to internal infrastructure, agents, or credentials",
 ]
 

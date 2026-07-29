@@ -37,7 +37,7 @@ pip install -e ".[dev]"
 ```bash
 dapptility-scan profiles          # scan profile budgets
 dapptility-scan rules             # registered rule catalog
-dapptility-scan scan <URL>        # RPC scan (default: Free / Quick-compatible)
+dapptility-scan scan <URL>        # RPC scan (default: Quick)
 ```
 
 Planned:
@@ -49,7 +49,7 @@ dapptility-scan contract <address> --chain <id> --rpc <url>
 
 Options (RPC today):
 
-- `--profile Free|Outbound|Authorized-Full` (moving to Quick|Standard|Deep — #33)
+- `--profile Quick|Standard|Deep` (aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep)
 - `--block-providers` — block known third-party RPC hosts
 - `--pretty` — formatted JSON output
 

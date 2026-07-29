@@ -22,7 +22,7 @@ labels: bug
 
 - Component: <!-- scanner / app / admin / reports -->
 - Version or commit:
-- Scan profile (if applicable): `Free` / `Outbound` / `Authorized-Full`
+- Scan profile (if applicable): `Quick` / `Standard` / `Deep`
 
 ## Logs / evidence
 
