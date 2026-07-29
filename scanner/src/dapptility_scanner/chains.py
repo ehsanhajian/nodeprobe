@@ -1,8 +1,11 @@
-"""Supported EVM chain registry."""
+"""EVM chain registry — any chain ID is accepted; names from Chainlist when known."""
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from functools import lru_cache
+from importlib import resources
 
 
 @dataclass(frozen=True)
@@ -11,50 +14,68 @@ class ChainInfo:
     name: str
     short_name: str
     is_testnet: bool = False
+    listed: bool = True
 
 
-# Initial MVP set — expand via ChainList import in V1.
-SUPPORTED_CHAINS: dict[int, ChainInfo] = {
-    1: ChainInfo(1, "Ethereum Mainnet", "eth"),
-    10: ChainInfo(10, "Optimism", "op"),
-    56: ChainInfo(56, "BNB Smart Chain", "bsc"),
-    137: ChainInfo(137, "Polygon", "polygon"),
-    250: ChainInfo(250, "Fantom", "ftm"),
-    42161: ChainInfo(42161, "Arbitrum One", "arb"),
-    43114: ChainInfo(43114, "Avalanche C-Chain", "avax"),
-    8453: ChainInfo(8453, "Base", "base"),
-    59144: ChainInfo(59144, "Linea", "linea"),
-    534352: ChainInfo(534352, "Scroll", "scroll"),
-    324: ChainInfo(324, "zkSync Era", "zksync"),
-    100: ChainInfo(100, "Gnosis", "gnosis"),
-    42220: ChainInfo(42220, "Celo", "celo"),
-    # Common testnets
-    11155111: ChainInfo(11155111, "Sepolia", "sepolia", is_testnet=True),
-    84532: ChainInfo(84532, "Base Sepolia", "base-sepolia", is_testnet=True),
-    421614: ChainInfo(421614, "Arbitrum Sepolia", "arb-sepolia", is_testnet=True),
-    11155420: ChainInfo(11155420, "Optimism Sepolia", "op-sepolia", is_testnet=True),
-    97: ChainInfo(97, "BNB Smart Chain Testnet", "bsc-testnet", is_testnet=True),
-    80002: ChainInfo(80002, "Polygon Amoy", "polygon-amoy", is_testnet=True),
-}
+# Backward-compatible alias used by older imports/tests.
+SUPPORTED_CHAINS: dict[int, ChainInfo] = {}
 
 
 class UnsupportedChainError(ValueError):
+    """Deprecated: scans no longer abort on unknown chains.
+
+    Kept so older callers that catch this exception continue to work.
+    """
+
     def __init__(self, chain_id: int | None, message: str | None = None):
         self.chain_id = chain_id
         super().__init__(
-            message
-            or (
-                f"Unsupported or unknown chain ID: {chain_id}. "
-                "Dapptility currently supports a fixed EVM chain list for MVP."
-            )
+            message or f"Unsupported or unknown chain ID: {chain_id}."
         )
 
 
+@lru_cache(maxsize=1)
+def _load_registry() -> dict[int, ChainInfo]:
+    text = resources.files("dapptility_scanner").joinpath("data/chains_mini.json").read_text(
+        encoding="utf-8"
+    )
+    raw = json.loads(text)
+    registry: dict[int, ChainInfo] = {}
+    for key, value in raw.items():
+        chain_id = int(key)
+        registry[chain_id] = ChainInfo(
+            chain_id=chain_id,
+            name=str(value["name"]),
+            short_name=str(value.get("short_name") or f"chain-{chain_id}"),
+            is_testnet=bool(value.get("is_testnet")),
+            listed=True,
+        )
+    # Populate alias for introspection / tests that inspect the map.
+    SUPPORTED_CHAINS.clear()
+    SUPPORTED_CHAINS.update(registry)
+    return registry
+
+
+def known_chains() -> dict[int, ChainInfo]:
+    return dict(_load_registry())
+
+
 def resolve_chain(chain_id: int) -> ChainInfo:
-    info = SUPPORTED_CHAINS.get(chain_id)
-    if info is None:
-        raise UnsupportedChainError(chain_id)
-    return info
+    """Resolve any EVM chain ID. Unknown IDs get a generic name and continue scanning."""
+    if not isinstance(chain_id, int):
+        raise TypeError(f"chain_id must be int, got {type(chain_id)!r}")
+    if chain_id < 0:
+        raise ValueError(f"chain_id must be non-negative, got {chain_id}")
+    info = _load_registry().get(chain_id)
+    if info is not None:
+        return info
+    return ChainInfo(
+        chain_id=chain_id,
+        name=f"Chain {chain_id}",
+        short_name=f"chain-{chain_id}",
+        is_testnet=False,
+        listed=False,
+    )
 
 
 def parse_hex_or_int(value: str | int) -> int:

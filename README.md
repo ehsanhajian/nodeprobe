@@ -1,18 +1,16 @@
 # Dapptility
 
-Personal professional scanner for **web**, **EVM JSON-RPC**, and **smart contracts**.
+Personal professional scanner for **web**, **multi-chain RPC**, and **EVM smart contracts**.
 
 Local-first console for projects you operate or are authorized to assess. No public signup, payments, or marketing surface.
 
 ## Overview
 
-Three scanners, one workspace:
-
 | Module | What it assesses |
 |---|---|
 | **Web** | External HTTP/TLS posture (headers, certificate, security.txt, robots.txt, …) |
-| **RPC** | Public EVM JSON-RPC from an external attacker’s view (namespaces, TLS, client fingerprint, …) |
-| **Smart contract** | Read-only on-chain surface (code, proxies, bytecode heuristics, Sourcify/ABI hints) |
+| **RPC** | Public RPC surface for **EVM**, **Solana**, **Substrate/Polkadot**, and **Cosmos/Tendermint** |
+| **Smart contract** | Read-only EVM on-chain surface (code, proxies, bytecode heuristics, Sourcify/ABI hints) |
 
 Projects hold website, RPC, and contract targets. Findings can be reviewed together and exported as a multi-module HTML/PDF report.
 
@@ -22,7 +20,7 @@ Projects hold website, RPC, and contract targets. Findings can be reviewed toget
 
 ## Status
 
-Personal-tool MVP is complete: all three scanners, console targets, unified findings/reports, and Deep RPC enrichment.
+Personal-tool MVP: web + multi-chain RPC + EVM contracts, console targets, unified findings/reports.
 
 Optional: ChainList RPC inventory sync (off by default — set `DAPPILITY_DISCOVERY_ENABLED=true`).
 
@@ -47,14 +45,21 @@ pip install -e ".[dev]"
 dapptility-scan profiles
 dapptility-scan rules --module all
 
-dapptility-scan scan https://rpc.example.com --profile Standard --pretty
-dapptility-scan web https://example.com --pretty
-dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1 --pretty
+# Auto-detect RPC family (evm | solana | substrate | cosmos)
+dapptility-scan rpc https://api.mainnet-beta.solana.com
+dapptility-scan rpc https://rpc.polkadot.io --family substrate
+dapptility-scan scan https://rpc.example.com --profile Standard   # EVM
+dapptility-scan solana https://api.mainnet-beta.solana.com
+dapptility-scan web https://example.com
+dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1
+
+# Machine-readable JSON
+dapptility-scan web https://example.com --json --pretty
 
 pytest -q
 ```
 
-Exit code `2` means the scan was blocked/aborted (unsafe target, kill switch, provider block with `--block-providers`, etc.).
+Exit code `2` means the scan was blocked/aborted (unsafe target, kill switch, unknown RPC family, provider block with `--block-providers`, etc.).
 
 See [scanner/README.md](scanner/README.md).
 

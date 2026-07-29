@@ -2,18 +2,18 @@
 
 **Domain:** `dapptility.com` (optional host; local-first)  
 **Document version:** 1.0  
-**Product type:** Personal professional multi-scanner — Web, EVM JSON-RPC, and smart contracts  
+**Product type:** Personal professional multi-scanner — Web, multi-chain RPC, and EVM smart contracts  
 **Audience:** Operator only (you). No public signup, payments, marketing, or outbound sales.
 
 ---
 
 ## 1. Product Definition
 
-Dapptility is a personal security assessment console for Web3 projects you operate or are authorized to review. It combines three scanners:
+Dapptility is a personal security assessment console for Web3 projects you operate or are authorized to review. It combines:
 
 1. **Web** — external HTTP/TLS posture of project websites and related hosts
-2. **RPC** — external EVM JSON-RPC infrastructure (existing engine; deepen over time)
-3. **Smart contract** — on-chain contract surface via RPC (bytecode, proxies, ownership, dangerous patterns)
+2. **RPC** — public RPC surface for **EVM**, **Solana**, **Substrate/Polkadot**, and **Cosmos/Tendermint** (auto-detect or explicit family)
+3. **Smart contract** — EVM on-chain contract surface via RPC (bytecode, proxies, ownership, dangerous patterns)
 
 No agents, SSH, or internal credentials. Local admin auth only. Reports are private to you.
 
@@ -79,18 +79,19 @@ Findings use the same severity/confidence model as RPC.
 
 ---
 
-## 4. RPC Scanner (existing — deepen)
+## 4. RPC Scanner (multi-chain)
 
-Keep and improve the current EVM JSON-RPC engine:
+**EVM** (`scan` / `rpc --family evm`): chain ID / identity / client version, privileged namespaces, TLS/HTTP hygiene, provider detection, Deep enrichment.
 
-- Chain ID / identity / client version
-- Expected public surface vs privileged namespaces
-- TLS / CORS / HTTP hygiene on the RPC URL
-- Third-party provider detection (informational for personal use; optional skip)
-- Deeper Deep-profile RPC rules: expanded namespaces, rpc_modules, client version risk notes, light rate-limit observation, informational provider detection
-- WebSocket RPC (later)
+**Solana** (`solana` / `rpc --family solana`): getHealth/version/slot, getIdentity disclosure, getClusterNodes (Deep), sensitive method probes.
 
-CLI: `dapptility-scan scan <rpc-url> ...`
+**Substrate / Polkadot** (`substrate`): system_chain/health, rpc_methods catalog, sensitive author/offchain method probes.
+
+**Cosmos / Tendermint** (`cosmos`): status identity, net_info peers, unsafe method probes (JSON-RPC + REST fallback).
+
+Auto-detect: `dapptility-scan rpc <url>` (or `--family auto|evm|solana|substrate|cosmos`).
+
+WebSocket RPC and non-EVM program/contract analysis: later.
 
 ---
 

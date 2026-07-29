@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 
 from dapptility_scanner import __version__, killswitch
-from dapptility_scanner.chains import UnsupportedChainError, resolve_chain
+from dapptility_scanner.chains import resolve_chain
 from dapptility_scanner.contract import (
     analyze_bytecode,
     detect_eip1167,
@@ -151,21 +151,20 @@ class ContractScannerEngine:
                     errors.append(ScanError(code="chain_id", message=str(exc)))
 
                 if chain_id is not None:
-                    try:
-                        network_name = resolve_chain(chain_id).name
-                    except UnsupportedChainError:
-                        network_name = f"chain-{chain_id}"
+                    info = resolve_chain(chain_id)
+                    network_name = info.name
+                    if not info.listed:
                         findings.append(
                             _finding(
                                 rule_id="SC-IDENT-002",
-                                title="Chain outside maintained support list",
+                                title="Chain not in local name registry",
                                 category="Identity",
                                 severity=Severity.INFO,
                                 confidence=Confidence.CONFIRMED,
                                 kind=CheckKind.INFO,
                                 description=(
-                                    f"Chain {chain_id} is not in the maintained support list; "
-                                    "continuing read-only checks anyway."
+                                    f"Chain {chain_id} has no entry in the bundled Chainlist "
+                                    "snapshot; continuing read-only checks anyway."
                                 ),
                                 evidence={"chain_id": chain_id},
                             )

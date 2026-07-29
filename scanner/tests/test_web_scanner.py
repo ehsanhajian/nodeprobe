@@ -83,9 +83,15 @@ def test_cli_web_and_rules(capsys, monkeypatch):
             )
 
     monkeypatch.setattr("dapptility_scanner.cli.WebScannerEngine", FakeEngine)
-    assert main(["web", "https://example.com", "--pretty"]) == 0
+    assert main(["web", "https://example.com"]) == 0
     out = capsys.readouterr().out
+    assert "Dapptility scan report" in out
     assert "https://example.com" in out
+    assert "Score:" in out
+
+    assert main(["web", "https://example.com", "--json"]) == 0
+    json_out = capsys.readouterr().out
+    assert '"endpoint": "https://example.com"' in json_out
 
     assert main(["rules", "--module", "web"]) == 0
     rules_out = capsys.readouterr().out

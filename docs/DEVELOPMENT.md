@@ -4,12 +4,13 @@
 
 | Piece | Status | Location |
 |---|---|---|
-| RPC scanner CLI | **Done** (Deep profile enriched) | `scanner/` |
+| Multi-chain RPC CLI (EVM / Solana / Substrate / Cosmos) | **Done** | `scanner/` |
+| Human + colored CLI reports (`--json` opt-in) | **Done** | `scanner/` |
 | Console, persistence, reports | **Done** | `app/` |
 | ChainList discovery (optional inventory) | Present | `app/` — optional |
-| Web scanner | **Done** | #34 |
-| Smart contract scanner | **Done** | #35 |
-| Multi-target projects + unified reports | **Done** | #32, #37 |
+| Web scanner | **Done** | `scanner/` |
+| EVM smart contract scanner | **Done** | `scanner/` |
+| Multi-target projects + unified reports | **Done** | `app/` |
 
 Product scope: [FEATURE_LIST.md](FEATURE_LIST.md) (personal tool — no SaaS/marketing).  
 Backlog: [GitHub issues](https://github.com/ehsanhajian/dapptility/issues) (label `personal-tool`).
@@ -21,7 +22,7 @@ Backlog: [GitHub issues](https://github.com/ehsanhajian/dapptility/issues) (labe
 
 ## Scanner
 
-Python package + CLI. RPC scan works today; web and contract modules are next.
+Python package + CLI for web, multi-chain RPC, and EVM contracts.
 
 ### Install
 
@@ -37,41 +38,48 @@ pip install -e ".[dev]"
 ```bash
 dapptility-scan profiles          # scan profile budgets
 dapptility-scan rules             # registered rule catalog
-dapptility-scan scan <URL>        # RPC scan (default: Quick)
-```
-
-Planned:
-
-```bash
-dapptility-scan web <URL>
+dapptility-scan rpc <URL>         # multi-chain RPC (auto-detect)
+dapptility-scan scan <URL>        # EVM RPC (default: Quick)
+dapptility-scan solana <URL>
+dapptility-scan substrate <URL>
+dapptility-scan cosmos <URL>
+dapptility-scan web <URL>         # website HTTP/TLS scan
 dapptility-scan contract <address> --chain <id> --rpc <url>
 ```
 
-Options (RPC today):
+Options:
 
 - `--profile Quick|Standard|Deep` (aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep)
-- `--block-providers` — block known third-party RPC hosts
-- `--pretty` — formatted JSON output
+- `--family auto|evm|solana|substrate|cosmos` — for `rpc` command
+- `--block-providers` — block known third-party RPC hosts (EVM only)
+- `--json` — machine-readable JSON instead of the human report
+- `--pretty` — with `--json`, indent JSON (human report is the default without `--json`)
+- `--color` / `--no-color` — force or disable ANSI colors in the human report
 
 Exit codes:
 
 - `0` — scan completed
-- `2` — blocked/aborted (unsafe target, unsupported chain, provider block, kill switch)
+- `2` — blocked/aborted (unsafe target, provider block, unknown family, kill switch)
 
 ### Architecture
 
 ```
 scanner/src/dapptility_scanner/
   cli.py          CLI entrypoint
-  engine.py       Scan orchestration
+  report.py       Human-readable (colorized) scan report formatting
+  engine.py       EVM scan orchestration
+  multichain/     Solana / Substrate / Cosmos engines + auto-detect
   profiles.py     Profile limits
   safety.py       SSRF and target validation
   rpc.py          Budgeted JSON-RPC client
-  chains.py       Supported EVM chain registry
+  chains.py       EVM chain ID → name (bundled Chainlist snapshot)
+  data/           Package data (chains_mini.json)
   providers.py    Third-party provider detection
   killswitch.py   Global emergency stop
   scoring.py      0–100 security score
-  rules/          Pluggable rule implementations
+  web_engine.py   Website scanner
+  contract_engine.py  EVM contract scanner
+  rules/          Pluggable EVM + web rule implementations
 ```
 
 ### RPC rules (current)

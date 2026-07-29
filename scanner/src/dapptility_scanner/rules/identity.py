@@ -9,7 +9,7 @@ class ChainIdRule(Rule):
     meta = RuleMeta(
         rule_id="EVM-IDENT-001",
         title="Chain ID resolved",
-        description="Endpoint responds to eth_chainId with a supported network.",
+        description="Endpoint responds to eth_chainId with a resolvable network.",
         category="Network Identity",
         severity=Severity.INFO,
         confidence=Confidence.CONFIRMED,
@@ -34,10 +34,20 @@ class ChainIdRule(Rule):
         info = resolve_chain(chain_id)
         context["chain_id"] = chain_id
         context["network_name"] = info.name
+        description = f"Chain ID {chain_id} mapped to {info.name}."
+        if not info.listed:
+            description = (
+                f"Chain ID {chain_id} is not in the local Chainlist snapshot; "
+                f"continuing as {info.name}."
+            )
         return [
             self.finding(
-                evidence={"chain_id": chain_id, "network": info.name},
-                description=f"Chain ID {chain_id} mapped to {info.name}.",
+                evidence={
+                    "chain_id": chain_id,
+                    "network": info.name,
+                    "listed": info.listed,
+                },
+                description=description,
             )
         ]
 

@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from dapptility_scanner import killswitch
-from dapptility_scanner.chains import UnsupportedChainError, resolve_chain
+from dapptility_scanner.chains import resolve_chain
 from dapptility_scanner.engine import ScannerEngine
 from dapptility_scanner.profiles import get_profile
 from dapptility_scanner.providers import detect_provider
@@ -73,10 +73,12 @@ def test_validate_blocks_private_hostname_resolution(monkeypatch):
         validate_target("https://internal.example")
 
 
-def test_supported_and_unsupported_chains():
+def test_resolve_any_chain():
     assert resolve_chain(1).name == "Ethereum Mainnet"
-    with pytest.raises(UnsupportedChainError):
-        resolve_chain(999999)
+    assert resolve_chain(592).name == "Astar"
+    unknown = resolve_chain(999999001)
+    assert unknown.name == "Chain 999999001"
+    assert unknown.listed is False
 
 
 def test_provider_detection():
@@ -163,12 +165,20 @@ def test_scan_happy_path_with_admin_exposure():
     assert payload["summary"]["critical"] >= 1
 
 
-def test_unsupported_chain_fails_closed():
+def test_unknown_chain_still_scans():
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content.decode())
-        if body["method"] == "eth_chainId":
-            return rpc_result(body["id"], "0xDEAD")  # 57005
-        return rpc_error(body["id"], -32601, "the method does not exist")
+        method = body["method"]
+        req_id = body["id"]
+        if method == "eth_chainId":
+            return rpc_result(req_id, "0xDEAD")  # 57005 — unlikely listed
+        if method == "net_version":
+            return rpc_result(req_id, "57005")
+        if method == "eth_blockNumber":
+            return rpc_result(req_id, "0x10")
+        if method == "web3_clientVersion":
+            return rpc_result(req_id, "Geth/v1.13.0")
+        return rpc_error(req_id, -32601, "the method does not exist")
 
     client = httpx.Client(transport=make_transport(handler))
     result = ScannerEngine(
@@ -179,9 +189,10 @@ def test_unsupported_chain_fails_closed():
         resolve_dns=False,
     ).run()
     client.close()
-    assert result.aborted is True
-    assert result.abort_reason == "unsupported_chain"
-    assert any(e.code == "unsupported_chain" for e in result.errors)
+    assert result.aborted is False
+    assert result.chain_id == 57005
+    assert result.network_name  # name from registry or Chain 57005
+    assert not any(e.code == "unsupported_chain" for e in result.errors)
 
 
 def test_block_providers_flag():
@@ -232,6 +243,88 @@ def test_cli_rules(capsys):
     assert "EVM-NS-ADMIN" in ids
     assert "EVM-CLIENT-003" in ids
     assert "EVM-RATE-001" in ids
+
+
+def test_human_report_format():
+    from dapptility_scanner.models import ScanProfile, ScanResult
+    from dapptility_scanner.report import format_human_report
+
+    result = ScanResult(
+        scanner_version="0.1.0",
+        profile=ScanProfile.QUICK,
+        endpoint="https://example.com",
+        started_at="t0",
+        finished_at="t1",
+        duration_ms=1500,
+        requests_made=4,
+        chain_id=None,
+        network_name=None,
+        client_version=None,
+        score=54,
+        findings=[
+            Finding(
+                rule_id="WEB-HDR-001",
+                title="Missing HSTS header",
+                category="HTTP Security",
+                severity=Severity.MEDIUM,
+                confidence=Confidence.CONFIRMED,
+                kind=CheckKind.FINDING,
+                description="Response does not include HSTS.",
+                impact="Downgrade risk.",
+                remediation="Set Strict-Transport-Security.",
+                score_impact=12,
+            )
+        ],
+        expected_surface=[],
+        errors=[],
+    )
+    text = format_human_report(result, color=False)
+    assert "Dapptility scan report" in text
+    assert "Score:" in text and "54/100" in text
+    assert "[Medium] Missing HSTS header" in text
+    assert "Fix:" in text and "Set Strict-Transport-Security." in text
+    assert "\033[" not in text
+
+    colored = format_human_report(result, color=True)
+    assert "\033[" in colored
+    assert "54/100" in colored
+    assert "[Medium]" in colored
+
+
+def test_cli_scan_json_flag(capsys, monkeypatch):
+    from dapptility_scanner.models import ScanProfile, ScanResult
+
+    class FakeEngine:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def run(self):
+            return ScanResult(
+                scanner_version="0.1.0",
+                profile=ScanProfile.QUICK,
+                endpoint="https://rpc.example",
+                started_at="t0",
+                finished_at="t1",
+                duration_ms=1,
+                requests_made=1,
+                chain_id=1,
+                network_name="Ethereum Mainnet",
+                client_version=None,
+                score=100,
+                findings=[],
+                expected_surface=[],
+                errors=[],
+            )
+
+    monkeypatch.setattr("dapptility_scanner.cli.ScannerEngine", FakeEngine)
+    assert main(["scan", "https://rpc.example"]) == 0
+    human = capsys.readouterr().out
+    assert "Dapptility scan report" in human
+
+    assert main(["scan", "https://rpc.example", "--json", "--pretty"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["endpoint"] == "https://rpc.example"
+    assert payload["score"] == 100
 
 
 def _rich_rpc_handler(request: httpx.Request) -> httpx.Response:

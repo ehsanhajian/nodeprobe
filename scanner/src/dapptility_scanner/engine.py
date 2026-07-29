@@ -6,7 +6,6 @@ from typing import Any
 import httpx
 
 from dapptility_scanner import __version__, killswitch
-from dapptility_scanner.chains import UnsupportedChainError
 from dapptility_scanner.killswitch import KillSwitchActive
 from dapptility_scanner.models import CheckKind, ScanError, ScanProfile, ScanResult
 from dapptility_scanner.profiles import ProfileLimits, get_profile
@@ -107,13 +106,6 @@ class ScannerEngine:
                             ScanError(code="aborted", message=str(exc))
                         )
                         break
-                    except UnsupportedChainError as exc:
-                        aborted = True
-                        abort_reason = "unsupported_chain"
-                        errors.append(
-                            ScanError(code="unsupported_chain", message=str(exc))
-                        )
-                        break
                     except Exception as exc:  # noqa: BLE001 — collect per-rule failures
                         errors.append(
                             ScanError(
@@ -140,17 +132,13 @@ class ScannerEngine:
             aborted = True
             abort_reason = "unsafe_target"
             errors.append(ScanError(code="unsafe_target", message=str(exc)))
-        except UnsupportedChainError as exc:
-            aborted = True
-            abort_reason = "unsupported_chain"
-            errors.append(ScanError(code="unsupported_chain", message=str(exc)))
         except Exception as exc:  # noqa: BLE001
             aborted = True
             abort_reason = "scan_error"
             errors.append(ScanError(code="scan_error", message=str(exc)))
 
         finished = datetime.now(timezone.utc)
-        score = 0 if abort_reason in {"unsupported_chain", "unsafe_target", "third_party_provider"} else compute_score(findings)
+        score = 0 if abort_reason in {"unsafe_target", "third_party_provider"} else compute_score(findings)
 
         return ScanResult(
             scanner_version=__version__,

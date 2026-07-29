@@ -168,12 +168,13 @@ def test_cli_contract_rules(capsys, monkeypatch):
                 "https://rpc.example",
                 "--chain",
                 "1",
-                "--pretty",
             ]
         )
         == 0
     )
-    assert "Ethereum Mainnet" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "Dapptility scan report" in out
+    assert "Ethereum Mainnet" in out
 
     assert main(["rules", "--module", "contract"]) == 0
     assert "SC-PROXY-001" in capsys.readouterr().out
