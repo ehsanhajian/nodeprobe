@@ -7,7 +7,8 @@
     <h1>Scan #{{ scan.id }}</h1>
     <p class="subtitle muted">
       <a href="/admin/projects/{{ scan.endpoint.project.id }}">{{ scan.endpoint.project.name }}</a>
-      · <span class="font-mono">{{ scan.endpoint.url }}</span>
+      · <span class="font-mono">{{ scan.endpoint.label }}</span>
+      {% if scan.module %} · <span class="badge info">{{ scan.module }}</span>{% endif %}
     </p>
   </div>
   <a class="btn btn-ghost btn-sm" href="/admin/projects/{{ scan.endpoint.project.id }}">← Back to project</a>
@@ -87,7 +88,7 @@
 <div class="card">
   <h2>Findings</h2>
   {% if scan.profile == 'Outbound' %}
-  <p class="muted text-sm" style="margin-bottom:0.75rem;">Outbound scan — confirm or reject findings before publishing a report.</p>
+  <p class="muted text-sm" style="margin-bottom:0.75rem;">Review findings and mark false positives before publishing a report.</p>
   {% endif %}
   <table>
     <thead>
@@ -137,9 +138,9 @@
 </div>
 
 <div class="card">
-  <h2>Report & outreach</h2>
+  <h2>Reports</h2>
   {% if report_published %}
-  <div class="flash-banner ok" style="margin-bottom:0.75rem;">Report published — private link is now included in the email draft below.</div>
+  <div class="flash-banner ok" style="margin-bottom:0.75rem;">Report published — private link is ready to share.</div>
   {% endif %}
   {% if outreach_report %}
   <p class="text-sm" style="margin-bottom:0.75rem;">
@@ -148,19 +149,19 @@
     · <a href="/admin/reports/{{ outreach_report.id }}">Manage</a>
   </p>
   {% else %}
-  <p class="muted text-sm" style="margin-bottom:0.75rem;">Publish a preliminary report to attach a private link to your outreach email.</p>
+  <p class="muted text-sm" style="margin-bottom:0.75rem;">Build a private HTML/PDF report for this scan.</p>
   <form method="post" action="/admin/scans/{{ scan.id }}/outreach-report" style="margin-bottom:0.75rem;">
     <button class="btn btn-primary btn-sm" type="submit">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-      Publish outreach report
+      Publish private report
     </button>
   </form>
   {% endif %}
   <details class="text-sm">
-    <summary style="cursor:pointer;color:var(--muted);">Advanced: custom report title</summary>
+    <summary style="cursor:pointer;color:var(--muted);">Custom report title (draft only)</summary>
     <form method="post" action="/admin/scans/{{ scan.id }}/report" style="margin-top:0.75rem;">
       <label>Report title</label>
-      <input name="title" value="Preliminary RPC Security Assessment — {{ scan.endpoint.project.name }}" required style="max-width:560px;">
+      <input name="title" value="Security assessment — {{ scan.endpoint.project.name }}" required style="max-width:560px;">
       <input type="hidden" name="report_type" value="preliminary">
       <button class="btn btn-secondary btn-sm" type="submit" style="margin-top:0.25rem;">Build draft only</button>
     </form>
@@ -168,13 +169,17 @@
 </div>
 
 {% if email_draft %}
-<div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-    <h2 style="margin:0;">
+<details class="card" style="cursor:default;">
+  <summary style="cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+    <h2 style="margin:0;font-size:1rem;">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:0.35rem;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      Outreach email draft
+      Optional email draft
     </h2>
-    <button class="btn btn-secondary btn-sm" onclick="copyEmail()" id="copy-btn">
+    <span class="muted text-xs">collapsed by default · legacy outreach helper</span>
+  </summary>
+  <div style="margin-top:0.75rem;">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:0.75rem;">
+    <button class="btn btn-secondary btn-sm" onclick="copyEmail(); event.preventDefault();" id="copy-btn" type="button">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
       Copy to clipboard
     </button>
@@ -192,7 +197,8 @@
     {% if email_draft.has_critical %} · <span style="color:#fca5a5;">contains critical/high severity</span>{% endif %}
     {% if email_draft.report_url %} · <a href="{{ email_draft.report_url }}" target="_blank">Report link included</a>{% endif %}
   </div>
-</div>
+  </div>
+</details>
 <script>
 function copyEmail() {
   var subject = document.getElementById('email-subject').textContent;
@@ -207,12 +213,5 @@ function copyEmail() {
   });
 }
 </script>
-{% elif scan.status == 'completed' %}
-<div class="card" style="border-color:var(--border);">
-  <div style="display:flex;align-items:center;gap:0.5rem;">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-    <span class="muted text-sm">No outreach email generated — scan found no actionable security findings.</span>
-  </div>
-</div>
 {% endif %}
 {% endblock %}

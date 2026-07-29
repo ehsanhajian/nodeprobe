@@ -5,7 +5,7 @@
 <div class="page-header">
   <div>
     <h1>Projects</h1>
-    <p class="subtitle muted">Manage outbound targets and their RPC endpoints.</p>
+    <p class="subtitle muted">Workspaces for web, RPC, and smart-contract targets.</p>
   </div>
   <a class="btn btn-primary" href="/admin/projects/new">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -15,18 +15,17 @@
 <div class="card">
   <table>
     <thead>
-      <tr><th>Name</th><th>Website</th><th>Lead score</th><th>Created</th></tr>
+      <tr><th>Name</th><th>Website</th><th>Created</th></tr>
     </thead>
     <tbody>
     {% for project in projects %}
     <tr>
       <td><a href="/admin/projects/{{ project.id }}"><strong>{{ project.name }}</strong></a></td>
       <td>{% if project.website %}<a href="{{ project.website }}" target="_blank" rel="noopener" class="text-sm">{{ project.website }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
-      <td>{{ project.lead_score }}</td>
       <td class="muted text-sm">{{ project.created_at.strftime('%Y-%m-%d') }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="4" class="muted" style="text-align:center;padding:1.5rem;">No projects yet. <a href="/admin/projects/new">Create one</a> or <a href="/admin/discovery">discover leads</a>.</td></tr>
+    <tr><td colspan="3" class="muted" style="text-align:center;padding:1.5rem;">No projects yet. <a href="/admin/projects/new">Create one</a>.</td></tr>
     {% endfor %}
     </tbody>
   </table>

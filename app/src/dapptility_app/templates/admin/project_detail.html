@@ -6,10 +6,11 @@
   <div>
     <h1>{{ project.name }}</h1>
     <p class="subtitle muted">
-      {% if project.website %}<a href="{{ project.website }}" target="_blank" rel="noopener">{{ project.website }}</a> · {% endif %}
-      Lead score {{ project.lead_score }}
-      {% if project.network_type %} · {{ project.network_type }}{% endif %}
-      {% if project.launch_stage %} · {{ project.launch_stage }}{% endif %}
+      {% if project.website %}<a href="{{ project.website }}" target="_blank" rel="noopener">{{ project.website }}</a>
+      {% if project.network_type or project.launch_stage %} · {% endif %}{% endif %}
+      {% if project.network_type %}{{ project.network_type }}{% endif %}
+      {% if project.network_type and project.launch_stage %} · {% endif %}
+      {% if project.launch_stage %}{{ project.launch_stage }}{% endif %}
     </p>
   </div>
   <a class="btn btn-ghost btn-sm" href="/admin/projects">← All projects</a>

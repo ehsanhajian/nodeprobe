@@ -34,6 +34,12 @@ def dashboard_stats(db: Session) -> dict:
         "projects": db.query(func.count(Project.id)).filter(Project.archived.is_(False)).scalar() or 0,
         "scans": db.query(func.count(Scan.id)).scalar() or 0,
         "completed_scans": db.query(func.count(Scan.id)).filter(Scan.status == "completed").scalar() or 0,
+        "open_findings": (
+            db.query(func.count(Finding.id))
+            .filter(Finding.kind != "expected_surface", Finding.status == "open")
+            .scalar()
+            or 0
+        ),
         "reports": db.query(func.count(Report.id)).scalar() or 0,
         "published_reports": db.query(func.count(Report.id)).filter(Report.status == "published").scalar() or 0,
         "discovery_new": db.query(func.count(DiscoveredLead.id)).filter(DiscoveredLead.status == "new").scalar() or 0,

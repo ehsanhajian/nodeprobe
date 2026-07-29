@@ -5,13 +5,13 @@
 <div class="page-header">
   <div>
     <h1>New project</h1>
-    <p class="subtitle muted">Create an outbound target to scan and draft outreach for.</p>
+    <p class="subtitle muted">A workspace for sites, RPC endpoints, and contracts you assess.</p>
   </div>
 </div>
 <div class="card" style="max-width:640px;">
   <form method="post">
     <label>Project name</label>
-    <input name="name" required placeholder="e.g. Arbitrum One">
+    <input name="name" required placeholder="e.g. My L2">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
       <div>
         <label>Network type</label>
@@ -24,20 +24,19 @@
     </div>
     <label>Website</label>
     <input name="website" placeholder="https://example.com">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-      <div>
-        <label>Launch stage</label>
-        <input name="launch_stage" placeholder="mainnet">
-      </div>
-      <div>
-        <label>Lead score</label>
+    <label>Launch stage</label>
+    <input name="launch_stage" placeholder="mainnet">
+    <label>Notes</label>
+    <textarea name="communication_notes" rows="3" placeholder="Internal notes…"></textarea>
+    <details style="margin:0.5rem 0 1rem;">
+      <summary class="muted text-sm" style="cursor:pointer;">Optional metadata</summary>
+      <div style="margin-top:0.75rem;">
+        <label>Disclosure contact</label>
+        <input name="disclosure_contact" placeholder="security@example.com">
+        <label>Legacy lead score (inventory)</label>
         <input name="lead_score" type="number" value="0" min="0" max="100">
       </div>
-    </div>
-    <label>Disclosure contact</label>
-    <input name="disclosure_contact" placeholder="security@example.com">
-    <label>Communication notes</label>
-    <textarea name="communication_notes" rows="3" placeholder="Internal notes about this project..."></textarea>
+    </details>
     <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
       <button class="btn btn-primary" type="submit">Create project</button>
       <a class="btn btn-ghost" href="/admin/projects">Cancel</a>

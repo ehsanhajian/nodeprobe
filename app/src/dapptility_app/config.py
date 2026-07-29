@@ -34,7 +34,7 @@ class Settings:
             "DAPPILITY_CHAINLIST_URL",
             "https://chainlist.org/rpcs.json",
         )
-        self.discovery_enabled = os.environ.get("DAPPILITY_DISCOVERY_ENABLED", "true").lower() in {
+        self.discovery_enabled = os.environ.get("DAPPILITY_DISCOVERY_ENABLED", "false").lower() in {
             "1",
             "true",
             "yes",

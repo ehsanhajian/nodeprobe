@@ -38,7 +38,7 @@ Open http://localhost:8000/admin (HTTP Basic: `admin` / your password).
 - Private report links (`/r/{token}`)
 - Raw evidence retention with admin-only access
 
-Planned: website + contract targets, web/contract scanners, unified multi-module reports. See GitHub `personal-tool` issues.
+Planned: unified multi-module reports. See GitHub `personal-tool` issues.
 
 ## Tests
 

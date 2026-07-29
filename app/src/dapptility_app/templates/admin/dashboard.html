@@ -5,8 +5,9 @@
 <div class="page-header">
   <div>
     <h1>Dashboard</h1>
-    <p class="subtitle muted">Overview of your scanner operations and discovery pipeline.</p>
+    <p class="subtitle muted">Projects, scans, and open findings.</p>
   </div>
+  <a class="btn btn-primary btn-sm" href="/admin/projects/new">New project</a>
 </div>
 
 <div class="grid" style="margin-bottom:1.25rem;">
@@ -15,14 +16,14 @@
     <div class="stat">{{ stats.projects }}</div>
   </div>
   <div class="card" style="margin:0;">
-    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Discovery leads</div>
-    <div class="stat">{{ stats.discovery_new }}</div>
-    <div class="muted text-xs" style="margin-top:0.2rem;">{{ stats.discovery_promoted }} promoted · {{ stats.discovery_runs }} runs</div>
-  </div>
-  <div class="card" style="margin:0;">
     <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Scans</div>
     <div class="stat">{{ stats.scans }}</div>
     <div class="muted text-xs" style="margin-top:0.2rem;">{{ stats.completed_scans }} completed</div>
+  </div>
+  <div class="card" style="margin:0;">
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Open findings</div>
+    <div class="stat">{{ stats.open_findings }}</div>
+    <div class="muted text-xs" style="margin-top:0.2rem;">excluding expected surface</div>
   </div>
   <div class="card" style="margin:0;">
     <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Reports</div>
@@ -35,19 +36,20 @@
   <h2>Recent scans</h2>
   <table>
     <thead>
-      <tr><th>ID</th><th>Project</th><th>Profile</th><th>Status</th><th>Score</th></tr>
+      <tr><th>ID</th><th>Project</th><th>Module</th><th>Profile</th><th>Status</th><th>Score</th></tr>
     </thead>
     <tbody>
     {% for scan in recent_scans %}
     <tr>
       <td><a href="/admin/scans/{{ scan.id }}">#{{ scan.id }}</a></td>
       <td>{{ scan.endpoint.project.name }}</td>
+      <td><span class="badge info">{{ scan.module or scan.endpoint.kind }}</span></td>
       <td><span class="badge info">{{ scan.profile }}</span></td>
       <td><span class="status-pill {{ scan.status }}">{{ scan.status }}</span></td>
       <td>{% if scan.score is not none %}<strong>{{ scan.score }}</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
     </tr>
     {% else %}
-    <tr><td colspan="5" class="muted" style="text-align:center;padding:1.5rem;">No scans yet. Create a project and run your first scan.</td></tr>
+    <tr><td colspan="6" class="muted" style="text-align:center;padding:1.5rem;">No scans yet. <a href="/admin/projects/new">Create a project</a> and add a web, RPC, or contract target.</td></tr>
     {% endfor %}
     </tbody>
   </table>

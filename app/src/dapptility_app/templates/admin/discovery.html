@@ -1,13 +1,13 @@
 {% extends "admin/base.html" %}
-{% block title %}Discovery — Dapptility{% endblock %}
+{% block title %}RPC inventory — Dapptility{% endblock %}
 {% block nav_discovery %}active{% endblock %}
 {% block content %}
 <div class="discovery-page">
 
 <div class="page-header">
   <div>
-    <h1>Discovery inbox</h1>
-    <p class="subtitle muted">New EVM mainnet networks and RPC endpoints from ChainList, scored for outbound outreach.</p>
+    <h1>RPC inventory</h1>
+    <p class="subtitle muted">Optional ChainList sync for discovering public RPC endpoints. Not required for personal scans.</p>
   </div>
   <form method="post" action="/admin/discovery/run">
     <button class="btn btn-primary" type="submit">
@@ -19,7 +19,7 @@
 
 <div class="grid" style="margin-bottom:1rem;">
   <div class="card" style="margin:0;">
-    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">New leads</div>
+    <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">New</div>
     <div class="stat">{{ status_counts.new }}</div>
   </div>
   <div class="card" style="margin:0;">
@@ -47,24 +47,22 @@
   <summary style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-weight:600;cursor:pointer;">How scoring works</summary>
   <div class="info-grid" style="margin-top:0.75rem;">
     <div class="info-item">
-      <strong>Lead score (0–100)</strong>
+      <strong>Inventory score (0–100)</strong>
       <p>
-        Automated outreach priority. Own-domain RPC (+35), mainnet (+25), HTTPS (+10), domain alignment (+15), new discovery (+20).
-        Known providers like Alchemy (−50) are scored low. Leads <strong>≥ 70</strong> are auto-promoted.
+        Heuristic interest score for optional inventory. Own-domain RPC (+35), mainnet (+25), HTTPS (+10), domain alignment (+15), newly seen (+20).
+        Known providers like Alchemy (−50) score low. Scores <strong>≥ 70</strong> can auto-create a project when discovery is enabled.
       </p>
     </div>
     <div class="info-item">
       <strong>Promote → project</strong>
       <p>
-        Creates an outbound project with the RPC endpoint pre-filled.
-        You can then run a limited scan, review findings, and draft outreach.
+        Creates a project with the RPC endpoint pre-filled so you can run a personal scan from the console.
       </p>
     </div>
     <div class="info-item">
       <strong>Dismiss</strong>
       <p>
-        Hides the lead from the inbox. It stays in sync so
-        it won't reappear as new, but won't clutter your queue.
+        Hides the candidate from the inbox. It stays in sync so it won't reappear as new.
       </p>
     </div>
   </div>
@@ -184,7 +182,7 @@
         <div class="actions-col">
         {% if lead.status == 'new' and not lead.is_third_party_provider %}
         <form method="post" action="/admin/discovery/{{ lead.id }}/promote">
-          <button class="btn btn-primary btn-sm" type="submit" title="Create outbound project with this RPC" style="width:100%;">
+          <button class="btn btn-primary btn-sm" type="submit" title="Create project with this RPC" style="width:100%;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/></svg>
             Promote
           </button>
