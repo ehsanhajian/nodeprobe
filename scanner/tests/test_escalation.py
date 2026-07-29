@@ -112,6 +112,45 @@ def test_escalation_eth_accounts_disclosed():
     assert any(k.rule_id.endswith("-NEXT") for k in kids)
 
 
+def test_escalation_sendtransaction_deepen():
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode())
+        method = body["method"]
+        req_id = body["id"]
+        if method == "eth_accounts":
+            return rpc_result(req_id, [])
+        if method == "eth_sendTransaction":
+            return rpc_error(req_id, -32602, "Invalid params")
+        return rpc_error(req_id, -32601, "the method does not exist")
+
+    client = httpx.Client(transport=make_transport(handler))
+    target = SafeTarget(
+        original_url="https://rpc.example",
+        sanitized_url="https://rpc.example",
+        hostname="rpc.example",
+        port=443,
+        scheme="https",
+        resolved_ips=["1.2.3.4"],
+    )
+    rpc = RpcClient(target, get_profile("Standard"), client=client)
+    parent = Finding(
+        rule_id="EVM-NS-ACCOUNTS",
+        title="Exposed eth_accounts",
+        category="RPC Method Exposure",
+        severity=Severity.HIGH,
+        confidence=Confidence.CONFIRMED,
+        kind=CheckKind.FINDING,
+        description="present",
+        score_impact=20,
+    )
+    kids = run_evm_escalations(rpc, {}, [parent])
+    rpc.close()
+    client.close()
+    deepen = [k for k in kids if k.rule_id.endswith("-DEEPEN")]
+    assert deepen
+    assert deepen[0].evidence.get("classification") == "method_accepts_calls"
+
+
 def test_quick_profile_skips_escalation():
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content.decode())

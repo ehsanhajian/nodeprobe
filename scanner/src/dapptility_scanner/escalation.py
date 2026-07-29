@@ -158,31 +158,32 @@ def _escalate_eth_accounts(client: RpcClient, context: dict, parent: Finding) ->
             blocked.append(method)
 
     if exposed:
-        out.append(
-            _child(
-                parent=parent,
-                step="NEXT",
-                title=f"Next: {len(exposed)} related privileged method(s) also open",
-                severity=Severity.CRITICAL
-                if any(m.startswith("personal_") or m == "eth_sendTransaction" for m in exposed)
-                else Severity.HIGH,
-                kind=CheckKind.FINDING,
-                description=(
-                    "After eth_accounts, follow-up probes found related methods available: "
-                    + ", ".join(exposed)
-                    + "."
-                ),
-                evidence={
-                    "step": "related_methods",
-                    "exposed": exposed,
-                    "blocked": blocked,
-                    "details": details,
-                },
-                score_impact=25 if any(m.startswith("personal_") for m in exposed) else 15,
-                impact="Combined eth_accounts + personal/send surface is a high-value attack path.",
-                remediation="Allowlist only public read methods; deny personal_* and eth_sendTransaction.",
-            )
+        next_finding = _child(
+            parent=parent,
+            step="NEXT",
+            title=f"Next: {len(exposed)} related privileged method(s) also open",
+            severity=Severity.CRITICAL
+            if any(m.startswith("personal_") or m == "eth_sendTransaction" for m in exposed)
+            else Severity.HIGH,
+            kind=CheckKind.FINDING,
+            description=(
+                "After eth_accounts, follow-up probes found related methods available: "
+                + ", ".join(exposed)
+                + "."
+            ),
+            evidence={
+                "step": "related_methods",
+                "exposed": exposed,
+                "blocked": blocked,
+                "details": details,
+            },
+            score_impact=25 if any(m.startswith("personal_") for m in exposed) else 15,
+            impact="Combined eth_accounts + personal/send surface is a high-value attack path.",
+            remediation="Allowlist only public read methods; deny personal_* and eth_sendTransaction.",
         )
+        out.append(next_finding)
+        # Second wave: confirm what eth_sendTransaction / eth_sign actually do
+        out.extend(_deepen_send_surface(client, parent, exposed))
     else:
         out.append(
             _child(
@@ -201,6 +202,149 @@ def _escalate_eth_accounts(client: RpcClient, context: dict, parent: Finding) ->
                 remediation="Still deny eth_accounts on the public gateway.",
             )
         )
+    return out
+
+
+def _classify_send_error(err: Any) -> tuple[str, Severity, int, str]:
+    """Map eth_sendTransaction / eth_sign errors to impact classes (no tx broadcast)."""
+    if not isinstance(err, dict):
+        text = str(err).lower()
+        code = None
+    else:
+        # unwrap __rpc_error__
+        payload = err.get("__rpc_error__", err)
+        if isinstance(payload, dict):
+            code = payload.get("code")
+            text = str(payload.get("message", payload)).lower()
+        else:
+            code = None
+            text = str(payload).lower()
+
+    if any(
+        s in text
+        for s in (
+            "unlocked",
+            "no key",
+            "unknown account",
+            "account is locked",
+            "no accounts",
+            "sender account",
+            "etherbase",
+        )
+    ):
+        return (
+            "no_unlocked_signer",
+            Severity.MEDIUM,
+            8,
+            "eth_sendTransaction is reachable but the node refused for lack of an unlocked signer.",
+        )
+    if "invalid params" in text or code == -32602 or "missing" in text or "required" in text:
+        return (
+            "method_accepts_calls",
+            Severity.HIGH,
+            12,
+            "eth_sendTransaction accepts calls (invalid-params / missing fields) — "
+            "the send path is live on this listener.",
+        )
+    if isinstance(err, str) and err.startswith("0x"):
+        return (
+            "unexpected_success",
+            Severity.CRITICAL,
+            40,
+            "Probe returned a transaction hash-like value — treat as critical until verified.",
+        )
+    return (
+        "error_other",
+        Severity.HIGH,
+        10,
+        f"eth_sendTransaction responded with an application error ({text[:120]}).",
+    )
+
+
+def _deepen_send_surface(
+    client: RpcClient, parent: Finding, exposed: list[str]
+) -> list[Finding]:
+    """Third step after related methods open: safe impact checks (no funded/broadcast abuse)."""
+    out: list[Finding] = []
+    if "eth_sendTransaction" in exposed:
+        # Empty object → forces validation without constructing a real spend tx
+        result = client.call("eth_sendTransaction", [{}])
+        if isinstance(result, dict) and (
+            "__rpc_error__" in result or "__http_error__" in result
+        ):
+            klass, sev, impact, desc = _classify_send_error(result)
+            out.append(
+                _child(
+                    parent=parent,
+                    step="DEEPEN",
+                    title=f"Next: eth_sendTransaction impact — {klass}",
+                    severity=sev,
+                    kind=CheckKind.FINDING,
+                    description=desc,
+                    evidence={
+                        "step": "send_impact",
+                        "method": "eth_sendTransaction",
+                        "probe_params": [{}],
+                        "classification": klass,
+                        "response": _trim(result),
+                    },
+                    score_impact=impact,
+                    impact=(
+                        "A live sendTransaction path means anyone who can unlock or supply "
+                        "a from-address may attempt sends if the node allows it."
+                    ),
+                    remediation="Deny eth_sendTransaction on public RPCs; only allow eth_sendRawTransaction if needed.",
+                )
+            )
+        else:
+            out.append(
+                _child(
+                    parent=parent,
+                    step="DEEPEN",
+                    title="Next: eth_sendTransaction returned a non-error result",
+                    severity=Severity.CRITICAL,
+                    kind=CheckKind.FINDING,
+                    description=(
+                        "Impact probe for eth_sendTransaction did not return a JSON-RPC error. "
+                        "Manual review required — do not assume funds moved."
+                    ),
+                    evidence={
+                        "step": "send_impact",
+                        "method": "eth_sendTransaction",
+                        "classification": "non_error_result",
+                        "response": _trim(result),
+                    },
+                    score_impact=35,
+                    remediation="Immediately disable eth_sendTransaction on this endpoint.",
+                )
+            )
+
+    if "eth_sign" in exposed or client.limits.name == ScanProfile.DEEP:
+        ok, detail = client.method_available(
+            "eth_sign",
+            ["0x0000000000000000000000000000000000000000", "0x00"],
+        )
+        if ok:
+            out.append(
+                _child(
+                    parent=parent,
+                    step="DEEPEN-SIGN",
+                    title="Next: eth_sign appears reachable",
+                    severity=Severity.HIGH,
+                    kind=CheckKind.FINDING,
+                    description=(
+                        "Follow-up eth_sign probe did not return method-not-found — "
+                        "signing API may be exposed."
+                    ),
+                    evidence={
+                        "step": "sign_impact",
+                        "method": "eth_sign",
+                        "detail": _trim(detail),
+                    },
+                    score_impact=15,
+                    remediation="Disable eth_sign / personal_sign on public listeners.",
+                )
+            )
     return out
 
 
@@ -430,9 +574,9 @@ def profile_allows_escalation(profile: ScanProfile) -> bool:
 
 def max_escalations_for(profile: ScanProfile) -> int:
     if profile == ScanProfile.DEEP:
-        return 12
+        return 16
     if profile == ScanProfile.STANDARD:
-        return 6
+        return 10
     return 0
 
 
