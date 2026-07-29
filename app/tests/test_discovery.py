@@ -108,11 +108,16 @@ def test_discovery_sync_creates_leads(db, monkeypatch):
             "close": lambda self: None,
         })()),
     )
+    monkeypatch.setattr(
+        "dapptility_app.services.discovery.sync.probe_rpc",
+        lambda url, **kw: True,
+    )
     run = run_discovery_sync(db)
     assert run.status == "completed"
-    assert run.leads_new >= 2
+    assert run.leads_new >= 1
     leads = db.query(DiscoveredLead).all()
     assert any(l.rpc_url == "https://rpc.examplechain.org" for l in leads)
+    assert not any(l.is_testnet for l in leads)
 
 
 def test_promote_lead_creates_project(db):

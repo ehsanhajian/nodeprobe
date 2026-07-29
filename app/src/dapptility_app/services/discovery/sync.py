@@ -10,8 +10,12 @@ from dapptility_app.database import DiscoveredLead, DiscoveryRun, Endpoint, Proj
 from dapptility_app.services import store
 from dapptility_app.services.discovery.chainlist import fetch_chainlist_candidates
 from dapptility_app.services.discovery.scoring import score_candidate
-from dapptility_app.services.discovery.utils import normalize_rpc_url
+from dapptility_app.services.discovery.utils import normalize_rpc_url, probe_rpc
 from dapptility_scanner.providers import detect_provider
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def run_discovery_sync(db: Session, *, actor: str = "system") -> DiscoveryRun:
@@ -42,6 +46,16 @@ def run_discovery_sync(db: Session, *, actor: str = "system") -> DiscoveryRun:
             if candidate.is_testnet:
                 continue
             normalized = normalize_rpc_url(candidate.rpc_url)
+
+            # Skip candidates already known
+            already_known = normalized in existing_urls or normalized in existing_endpoint_urls
+
+            # For new candidates, check reachability before adding
+            if not already_known:
+                if not probe_rpc(candidate.rpc_url):
+                    logger.debug("Skipping unreachable RPC: %s", candidate.rpc_url)
+                    continue
+
             provider = detect_provider(candidate.rpc_url)
             is_third_party = provider is not None
             is_new = normalized not in existing_urls and normalized not in existing_endpoint_urls
