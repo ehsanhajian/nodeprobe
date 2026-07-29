@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 from dapptility_app.auth import verify_admin
 from dapptility_app.database import DiscoveredLead, DiscoveryRun, Endpoint, Finding, Project, Report, Scan, get_db
 from dapptility_app.services.discovery.sync import dismiss_lead, promote_lead, run_discovery_sync
+from dapptility_app.services.outreach import generate_outreach_email
 from dapptility_app.services import store
 
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "templates"
@@ -175,10 +176,11 @@ def scan_detail(request: Request, scan_id: int, db: Session = Depends(get_db)):
     if not scan:
         raise HTTPException(404)
     raw_available = store.load_raw_scan(scan) is not None
+    email_draft = generate_outreach_email(db, scan.endpoint.project, scan)
     return templates.TemplateResponse(
         request,
         "admin/scan_detail.html",
-        {"scan": scan, "raw_available": raw_available},
+        {"scan": scan, "raw_available": raw_available, "email_draft": email_draft},
     )
 
 

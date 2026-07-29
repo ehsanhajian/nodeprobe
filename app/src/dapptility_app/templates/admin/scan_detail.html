@@ -148,4 +148,51 @@
     </button>
   </form>
 </div>
-{% endblock %}
+
+{% if email_draft %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+    <h2 style="margin:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:0.35rem;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      Outreach email draft
+    </h2>
+    <button class="btn btn-secondary btn-sm" onclick="copyEmail()" id="copy-btn">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      Copy to clipboard
+    </button>
+  </div>
+  <div style="margin-bottom:0.75rem;">
+    <span class="text-xs text-secondary" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Subject</span>
+    <div style="padding:0.5rem 0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:0.25rem;font-size:0.9rem;" id="email-subject">{{ email_draft.subject }}</div>
+  </div>
+  <div>
+    <span class="text-xs text-secondary" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Body</span>
+    <pre id="email-body" style="white-space:pre-wrap;word-wrap:break-word;padding:0.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-top:0.25rem;font-family:inherit;font-size:0.85rem;line-height:1.6;color:var(--text);max-height:none;overflow:visible;">{{ email_draft.body }}</pre>
+  </div>
+  <div class="muted text-xs" style="margin-top:0.5rem;">
+    {{ email_draft.finding_count }} finding(s) included
+    {% if email_draft.has_critical %} · <span style="color:#fca5a5;">contains critical/high severity</span>{% endif %}
+  </div>
+</div>
+<script>
+function copyEmail() {
+  var subject = document.getElementById('email-subject').textContent;
+  var body = document.getElementById('email-body').textContent;
+  var text = 'Subject: ' + subject + '\n\n' + body;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = document.getElementById('copy-btn');
+    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+    setTimeout(function() {
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy to clipboard';
+    }, 2000);
+  });
+}
+</script>
+{% elif scan.status == 'completed' %}
+<div class="card" style="border-color:var(--border);">
+  <div style="display:flex;align-items:center;gap:0.5rem;">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    <span class="muted text-sm">No outreach email generated — scan found no actionable security findings.</span>
+  </div>
+</div>
+{% endif %}
