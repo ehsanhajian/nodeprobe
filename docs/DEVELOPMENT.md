@@ -2,25 +2,26 @@
 
 ## Current status
 
-| Milestone | Status | Location |
+| Piece | Status | Location |
 |---|---|---|
-| M1 — Scanner CLI | **Complete** | `scanner/` |
-| M2 — Reports and Admin | **Complete** | `app/` |
-| M2.5 — Discovery inbox | **Complete** | `app/` (ChainList daily sync) |
-| M3 — Public Self-service | Not started | `app/` (planned) |
-| M4 — Verification and Payment | Not started | `app/` (planned) |
-| M5 — First Sales | Not started | — |
+| RPC scanner CLI | **Done** | `scanner/` |
+| Console, persistence, reports | **Done** (RPC-focused) | `app/` |
+| ChainList discovery (optional inventory) | Present | `app/` — de-emphasize per #38 |
+| Web scanner | Planned | #34 |
+| Smart contract scanner | Planned | #35 |
+| Multi-target projects + unified reports | Planned | #32, #37 |
 
-Product scope and requirements: [FEATURE_LIST.md](FEATURE_LIST.md)
+Product scope: [FEATURE_LIST.md](FEATURE_LIST.md) (personal tool — no SaaS/marketing).  
+Backlog: [GitHub issues](https://github.com/ehsanhajian/dapptility/issues) (label `personal-tool`).
 
 ## Prerequisites
 
 - Python 3.10+
 - `python3-venv` (on Ubuntu: `sudo apt install python3.10-venv`)
 
-## Scanner (M1)
+## Scanner
 
-The scanner is a Python package with a CLI that outputs JSON scan results.
+Python package + CLI. RPC scan works today; web and contract modules are next.
 
 ### Install
 
@@ -36,12 +37,19 @@ pip install -e ".[dev]"
 ```bash
 dapptility-scan profiles          # scan profile budgets
 dapptility-scan rules             # registered rule catalog
-dapptility-scan scan <URL>        # run a scan (default: Free profile)
+dapptility-scan scan <URL>        # RPC scan (default: Free / Quick-compatible)
 ```
 
-Options:
+Planned:
 
-- `--profile Free|Outbound|Authorized-Full`
+```bash
+dapptility-scan web <URL>
+dapptility-scan contract <address> --chain <id> --rpc <url>
+```
+
+Options (RPC today):
+
+- `--profile Free|Outbound|Authorized-Full` (moving to Quick|Standard|Deep — #33)
 - `--block-providers` — block known third-party RPC hosts
 - `--pretty` — formatted JSON output
 
@@ -56,7 +64,7 @@ Exit codes:
 scanner/src/dapptility_scanner/
   cli.py          CLI entrypoint
   engine.py       Scan orchestration
-  profiles.py     Free / Outbound / Authorized-Full limits
+  profiles.py     Profile limits
   safety.py       SSRF and target validation
   rpc.py          Budgeted JSON-RPC client
   chains.py       Supported EVM chain registry
@@ -66,7 +74,7 @@ scanner/src/dapptility_scanner/
   rules/          Pluggable rule implementations
 ```
 
-### Rules (15)
+### RPC rules (current)
 
 | ID | Category |
 |---|---|
@@ -83,8 +91,8 @@ scanner/src/dapptility_scanner/
 - DNS resolution validation (reject private resolved addresses)
 - No redirect following to unvalidated targets
 - Per-profile request count, RPS, and duration ceilings
-- Presence-only namespace probes on Free/Outbound (no expensive payloads)
-- Outbound profile blocks Alchemy, Ankr, Infura, QuickNode, LlamaNodes, and others
+- Presence-only namespace probes on lighter profiles (no expensive payloads)
+- Optional third-party provider blocking
 - Kill switch file: `/tmp/dapptility-scan-kill` or `DAPPILITY_KILL_SWITCH` env var
 
 ### Tests
@@ -97,9 +105,9 @@ pytest -q
 
 CI runs the same test suite on push/PR to `main`.
 
-## Admin app (M2)
+## Console (app)
 
-FastAPI admin panel with SQLite persistence, scan orchestration, finding review, and report delivery.
+FastAPI personal console with SQLite persistence, scan orchestration, and report delivery.
 
 ### Install and run
 
@@ -109,49 +117,25 @@ export DAPPILITY_ADMIN_PASSWORD=your-secure-password
 dapptility-admin
 ```
 
-Admin UI: http://localhost:8000/admin (HTTP Basic `admin` / password)
+UI: http://localhost:8000/admin (HTTP Basic `admin` / password)
 
-### Features
+### Features today
 
-- Project and HTTP endpoint CRUD with third-party provider flags
-- Scan execution (Free / Outbound / Authorized-Full) from admin
-- Outbound finding review: confirm, reject, false positive
+- Project and HTTP RPC endpoint CRUD
+- Scan execution from admin
+- Finding review (confirm / reject / false positive)
 - HTML and PDF reports with What we did / did not do
 - Private report links at `/r/{token}`
-- Raw scan JSON retention (30 days, admin-only access)
-- Audit log for admin actions
-- **Discovery inbox** — daily ChainList sync, automatic lead scoring, promote/dismiss workflow
-
-### Discovery (admin)
-
-The admin panel scans [ChainList](https://chainlist.org) for new EVM networks and RPC endpoints. Each candidate is scored automatically (own-domain RPC, mainnet vs testnet, third-party provider detection, HTTPS, domain alignment). High-scoring leads can be auto-promoted to outbound projects.
-
-| Setting | Default | Description |
-|---|---|---|
-| `DAPPILITY_DISCOVERY_ENABLED` | `true` | Enable daily scheduler |
-| `DAPPILITY_DISCOVERY_HOUR_UTC` | `6` | Run time (UTC) |
-| `DAPPILITY_DISCOVERY_AUTO_PROMOTE_SCORE` | `70` | Auto-create project when score ≥ threshold |
-| `DAPPILITY_CHAINLIST_URL` | chainlist.org JSON | Source feed |
-
-Admin UI: `/admin/discovery` — filter by status, run now, promote, or dismiss.
-
-```
-app/src/dapptility_app/services/discovery/
-  chainlist.py    Fetch and parse ChainList JSON
-  scoring.py      Heuristic lead scoring (0–100)
-  sync.py         Sync run, promote, dismiss
-  utils.py        URL normalization
-  scheduler.py    APScheduler daily cron
-```
-
+- Raw scan JSON retention (30 days, admin-only)
+- Optional ChainList discovery inbox (sales-oriented; retire from primary nav — #38)
 
 ```
 app/src/dapptility_app/
   main.py           FastAPI application
   database.py       SQLAlchemy models
-  routes/           Admin and public report routes
+  routes/           Admin and private report routes
   services/         Scan orchestration, reports, persistence
-  templates/        Admin UI and report HTML
+  templates/        Console UI and report HTML
 ```
 
 ### Tests
@@ -160,13 +144,11 @@ app/src/dapptility_app/
 cd app && pytest -q
 ```
 
-## Next up (M3)
+## Next up
 
-- Public free scan flow (no standalone marketing landing — **P3**)
-- User accounts with magic-link auth
-- Abuse budgets and rate limiting
+See epic [#30](https://github.com/ehsanhajian/dapptility/issues/30) and DoD [#40](https://github.com/ehsanhajian/dapptility/issues/40).
 
-See GitHub milestone [M3 — Public Self-service](https://github.com/ehsanhajian/dapptility/milestone/3).
+Suggested order: docs polish (#31) → targets (#32) → profiles (#33) → web (#34) + contract (#35) → wire-up (#36) → unified reports (#37) → UI cleanup (#38).
 
 ## Git workflow
 
@@ -176,11 +158,7 @@ Repository: https://github.com/ehsanhajian/dapptility
 git checkout -b feature/my-change
 # ... edit ...
 pytest -q   # from scanner/ and app/ with venv active
-# or in production:
-docker compose up -d --build
 git add -A && git commit -m "..."
 git push -u origin feature/my-change
 gh pr create
 ```
-
-Remote uses SSH: `git@github.com:ehsanhajian/dapptility.git`

@@ -7,12 +7,14 @@ import sys
 from dapptility_scanner.engine import ScannerEngine
 from dapptility_scanner.profiles import PROFILES
 from dapptility_scanner.rules import all_rules
+from dapptility_scanner.rules.web import web_rules
+from dapptility_scanner.web_engine import WebScannerEngine
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="dapptility-scan",
-        description="Dapptility EVM JSON-RPC security scanner",
+        description="Dapptility personal scanner — web, EVM JSON-RPC, and contracts",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -34,10 +36,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="Pretty-print JSON output",
     )
 
+    web = sub.add_parser("web", help="Scan a website (HTTP/TLS surface)")
+    web.add_argument("url", help="HTTP(S) website URL")
+    web.add_argument(
+        "--profile",
+        default="Free",
+        help="Scan profile: Free | Outbound | Authorized-Full (default: Free)",
+    )
+    web.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output",
+    )
+
     sub.add_parser("profiles", help="List scan profiles and budgets")
-    sub.add_parser("rules", help="List registered rules")
+    rules = sub.add_parser("rules", help="List registered rules")
+    rules.add_argument(
+        "--module",
+        choices=("rpc", "web", "all"),
+        default="all",
+        help="Rule module to list (default: all)",
+    )
 
     return parser
+
+
+def _print_result(result, *, pretty: bool) -> int:
+    print(json.dumps(result.to_dict(), indent=2 if pretty else None))
+    if result.aborted and result.abort_reason in {
+        "unsafe_target",
+        "unsupported_chain",
+        "third_party_provider",
+        "kill_switch",
+    }:
+        return 2
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -59,6 +92,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "rules":
+        ruleset = []
+        if args.module in {"rpc", "all"}:
+            ruleset.extend(all_rules())
+        if args.module in {"web", "all"}:
+            ruleset.extend(web_rules())
         payload = [
             {
                 "rule_id": r.meta.rule_id,
@@ -68,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
                 "kind": r.meta.kind.value,
                 "profiles": [p.value for p in r.meta.allowed_profiles],
             }
-            for r in all_rules()
+            for r in ruleset
         ]
         print(json.dumps(payload, indent=2))
         return 0
@@ -79,16 +117,11 @@ def main(argv: list[str] | None = None) -> int:
             args.profile,
             block_providers=args.block_providers,
         ).run()
-        data = result.to_dict()
-        print(json.dumps(data, indent=2 if args.pretty else None))
-        if result.aborted and result.abort_reason in {
-            "unsafe_target",
-            "unsupported_chain",
-            "third_party_provider",
-            "kill_switch",
-        }:
-            return 2
-        return 0
+        return _print_result(result, pretty=args.pretty)
+
+    if args.command == "web":
+        result = WebScannerEngine(args.url, args.profile).run()
+        return _print_result(result, pretty=args.pretty)
 
     parser.error(f"Unknown command: {args.command}")
     return 1

@@ -1,8 +1,8 @@
 # Scanner
 
-EVM JSON-RPC security scanner — Milestone 1.
+Personal multi-scanner engines + CLI. RPC and web are available; smart contracts next.
 
-See [docs/FEATURE_LIST.md](../docs/FEATURE_LIST.md) §6 Scan Profiles and §7 EVM Scan Engine.
+See [docs/FEATURE_LIST.md](../docs/FEATURE_LIST.md).
 
 ## Setup
 
@@ -19,13 +19,16 @@ pip install -e ".[dev]"
 # List profiles and budgets
 dapptility-scan profiles
 
-# List rules
-dapptility-scan rules
+# List rules (rpc | web | all)
+dapptility-scan rules --module all
 
-# Scan an endpoint (Free profile by default)
+# Scan an RPC endpoint (Free profile by default)
 dapptility-scan scan https://rpc.example.com --pretty
 
-# Outbound profile (blocks known third-party providers)
+# Scan a website
+dapptility-scan web https://example.com --pretty
+
+# Outbound profile (blocks known third-party RPC providers)
 dapptility-scan scan https://rpc.example.com --profile Outbound --pretty
 ```
 

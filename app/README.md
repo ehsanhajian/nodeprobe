@@ -1,6 +1,6 @@
 # App
 
-Admin panel, persistence, and report delivery — Milestone 2.
+Personal console, persistence, and report delivery.
 
 ## Setup
 
@@ -28,15 +28,17 @@ Open http://localhost:8000/admin (HTTP Basic: `admin` / your password).
 | `DAPPILITY_REPORT_BASE_URL` | `http://localhost:8000` | Base URL for private report links |
 | `DAPPILITY_RAW_RETENTION_DAYS` | `30` | Raw scan JSON retention |
 
-## Features (M2)
+## Features
 
-- Project and HTTP endpoint CRUD
-- Third-party provider detection and scan blocking
-- Scan execution from admin (Free / Outbound / Authorized-Full)
-- Outbound finding review (confirm / reject / false positive)
+- Project and HTTP RPC endpoint CRUD
+- Third-party provider detection (optional skip)
+- Scan execution from console
+- Finding review (confirm / reject / false positive)
 - HTML and PDF reports with scope disclosure
 - Private report links (`/r/{token}`)
 - Raw evidence retention with admin-only access
+
+Planned: website + contract targets, web/contract scanners, unified multi-module reports. See GitHub `personal-tool` issues.
 
 ## Tests
 

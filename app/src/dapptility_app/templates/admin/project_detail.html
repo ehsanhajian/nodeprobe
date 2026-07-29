@@ -16,18 +16,29 @@
 </div>
 
 <div class="card">
-  <h2>Endpoints</h2>
+  <h2>Targets</h2>
   <table>
     <thead>
-      <tr><th>RPC URL</th><th>Provider</th><th>Scan</th></tr>
+      <tr><th>Kind</th><th>Target</th><th>Notes</th><th>Scan</th></tr>
     </thead>
     <tbody>
     {% for ep in endpoints %}
     <tr>
-      <td><span class="font-mono text-sm">{{ ep.url }}</span></td>
-      <td>{% if ep.is_third_party_provider %}<span class="badge warn">{{ ep.provider_name }}</span>{% else %}<span class="badge ok">Own domain</span>{% endif %}</td>
+      <td><span class="badge info">{{ ep.kind }}</span></td>
+      <td><span class="font-mono text-sm">{{ ep.label }}</span></td>
       <td>
-        {% if not ep.is_third_party_provider %}
+        {% if ep.kind == 'rpc' and ep.is_third_party_provider %}
+          <span class="badge warn">{{ ep.provider_name }}</span>
+        {% elif ep.kind == 'rpc' %}
+          <span class="badge ok">Own domain</span>
+        {% elif ep.kind == 'contract' and ep.source_ref %}
+          <span class="muted text-sm">{{ ep.source_ref }}</span>
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if ep.scanable %}
         <form method="post" action="/admin/endpoints/{{ ep.id }}/scan" class="form-inline" onsubmit="handleScanSubmit(this)">
           <select name="profile" style="width:auto;min-width:8rem;">
             <option value="Outbound">Outbound</option>
@@ -40,22 +51,44 @@
             <span class="scan-label">Run scan</span>
           </button>
         </form>
-        {% else %}
+        {% elif ep.kind == 'contract' %}
+        <span class="muted text-sm">Contract scanner coming soon</span>
+        {% elif ep.kind == 'rpc' and ep.is_third_party_provider %}
         <span class="muted text-sm">Blocked — third-party hosted</span>
+        {% else %}
+        <span class="muted text-sm">Not scanable</span>
         {% endif %}
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="3" class="muted" style="text-align:center;padding:1.25rem;">No endpoints added yet.</td></tr>
+    <tr><td colspan="4" class="muted" style="text-align:center;padding:1.25rem;">No targets added yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
-  <form method="post" action="/admin/projects/{{ project.id }}/endpoints" class="form-inline" style="margin-top:1rem;">
-    <input name="url" placeholder="https://rpc.example.com" required style="flex:1;margin:0;">
-    <button class="btn btn-secondary btn-sm" type="submit">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Add endpoint
-    </button>
+
+  <form method="post" action="/admin/projects/{{ project.id }}/endpoints" style="margin-top:1rem;display:grid;gap:0.75rem;">
+    <div class="form-inline" style="gap:0.5rem;flex-wrap:wrap;">
+      <label class="muted text-sm" for="kind">Kind</label>
+      <select name="kind" id="kind" style="width:auto;min-width:8rem;" onchange="onKindChange(this.value)">
+        <option value="rpc">RPC</option>
+        <option value="web">Website</option>
+        <option value="contract">Contract</option>
+      </select>
+    </div>
+    <div id="fields-url" class="form-inline">
+      <input name="url" id="url" placeholder="https://rpc.example.com or https://example.com" style="flex:1;margin:0;">
+    </div>
+    <div id="fields-contract" class="form-inline" style="display:none;gap:0.5rem;flex-wrap:wrap;">
+      <input name="address" id="address" placeholder="0x…" style="flex:1;min-width:16rem;margin:0;">
+      <input name="chain_id" id="chain_id" placeholder="Chain ID" style="width:7rem;margin:0;">
+      <input name="source_ref" id="source_ref" placeholder="Sourcify / explorer URL (optional)" style="flex:1;min-width:12rem;margin:0;">
+    </div>
+    <div class="form-inline">
+      <button class="btn btn-secondary btn-sm" type="submit">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add target
+      </button>
+    </div>
   </form>
 </div>
 
@@ -63,13 +96,14 @@
   <h2>Scans</h2>
   <table>
     <thead>
-      <tr><th>ID</th><th>Endpoint</th><th>Profile</th><th>Status</th><th>Score</th><th>Chain</th><th>Requests</th><th>Date</th></tr>
+      <tr><th>ID</th><th>Module</th><th>Target</th><th>Profile</th><th>Status</th><th>Score</th><th>Chain</th><th>Requests</th><th>Date</th></tr>
     </thead>
     <tbody>
     {% for scan in scans %}
     <tr>
       <td><a href="/admin/scans/{{ scan.id }}">#{{ scan.id }}</a></td>
-      <td><span class="font-mono text-xs">{{ scan.endpoint.url[:40] }}{% if scan.endpoint.url|length > 40 %}…{% endif %}</span></td>
+      <td><span class="badge info">{{ scan.module or scan.endpoint.kind }}</span></td>
+      <td><span class="font-mono text-xs">{{ scan.endpoint.label[:40] }}{% if scan.endpoint.label|length > 40 %}…{% endif %}</span></td>
       <td><span class="badge info">{{ scan.profile }}</span></td>
       <td><span class="status-pill {{ scan.status }}">{{ scan.status }}</span></td>
       <td>{% if scan.score is not none %}<strong>{{ scan.score }}</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
@@ -78,7 +112,7 @@
       <td class="muted text-sm">{{ scan.created_at.strftime('%Y-%m-%d %H:%M') if scan.created_at else '—' }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="8" class="muted" style="text-align:center;padding:1.25rem;">No scans yet.</td></tr>
+    <tr><td colspan="9" class="muted" style="text-align:center;padding:1.25rem;">No scans yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -119,6 +153,21 @@ function handleScanSubmit(form) {
   btn.querySelector('.scan-spinner').style.display = '';
   btn.querySelector('.scan-label').textContent = 'Scanning…';
   form.querySelector('select').disabled = true;
+}
+function onKindChange(kind) {
+  var urlFields = document.getElementById('fields-url');
+  var contractFields = document.getElementById('fields-contract');
+  var urlInput = document.getElementById('url');
+  if (kind === 'contract') {
+    urlFields.style.display = 'none';
+    contractFields.style.display = 'flex';
+    urlInput.required = false;
+  } else {
+    urlFields.style.display = 'flex';
+    contractFields.style.display = 'none';
+    urlInput.required = true;
+    urlInput.placeholder = kind === 'web' ? 'https://example.com' : 'https://rpc.example.com';
+  }
 }
 </script>
 {% endblock %}

@@ -81,26 +81,72 @@ def update_project(db: Session, project: Project, **fields) -> Project:
     return project
 
 
-def add_endpoint(db: Session, project: Project, url: str) -> Endpoint:
+def add_endpoint(
+    db: Session,
+    project: Project,
+    url: str | None = None,
+    *,
+    kind: str = "rpc",
+    address: str | None = None,
+    chain_id: int | None = None,
+    abi_json: str | None = None,
+    source_ref: str | None = None,
+    crawl_budget: int | None = None,
+) -> Endpoint:
     from dapptility_scanner.providers import detect_provider
 
-    provider = detect_provider(url)
+    kind = (kind or "rpc").strip().lower()
+    if kind == "website":
+        kind = "web"
+    if kind not in {"web", "rpc", "contract"}:
+        raise ValueError(f"Unknown target kind: {kind}")
+
+    provider = None
+    is_third_party = False
+    provider_name = None
+    if kind == "rpc" and url:
+        provider = detect_provider(url)
+        is_third_party = provider is not None
+        provider_name = provider.provider if provider else None
+
+    if kind in {"web", "rpc"} and not url:
+        raise ValueError(f"{kind} targets require a URL")
+    if kind == "contract" and not address:
+        raise ValueError("contract targets require an address")
+
     endpoint = Endpoint(
         project_id=project.id,
+        kind=kind,
         url=url,
-        is_third_party_provider=provider is not None,
-        provider_name=provider.provider if provider else None,
+        address=address,
+        chain_id=chain_id,
+        abi_json=abi_json,
+        source_ref=source_ref,
+        crawl_budget=crawl_budget,
+        is_third_party_provider=is_third_party,
+        provider_name=provider_name,
     )
     db.add(endpoint)
     db.commit()
     db.refresh(endpoint)
-    log_action(db, "endpoint.create", f"endpoint_id={endpoint.id} project_id={project.id}")
+    log_action(
+        db,
+        "endpoint.create",
+        f"endpoint_id={endpoint.id} project_id={project.id} kind={kind}",
+    )
     return endpoint
 
 
 def execute_scan(db: Session, endpoint: Endpoint, profile: str) -> Scan:
+    module = endpoint.kind if endpoint.kind != "website" else "web"
+    if module == "contract":
+        raise ValueError("Contract scanner is not implemented yet")
+    if not endpoint.url:
+        raise ValueError("Target has no URL to scan")
+
     scan = Scan(
         endpoint_id=endpoint.id,
+        module=module,
         profile=profile,
         status="running",
         started_at=datetime.now(timezone.utc),
@@ -110,7 +156,7 @@ def execute_scan(db: Session, endpoint: Endpoint, profile: str) -> Scan:
     db.refresh(scan)
 
     try:
-        result = run_scan_for_endpoint(endpoint.url, profile)
+        result = run_scan_for_endpoint(endpoint.url, profile, kind=module)
         scan.status = "aborted" if result.aborted else "completed"
         scan.score = result.score
         scan.chain_id = result.chain_id
@@ -129,6 +175,7 @@ def execute_scan(db: Session, endpoint: Endpoint, profile: str) -> Scan:
             db.add(
                 Finding(
                     scan_id=scan.id,
+                    module=module,
                     rule_id=item.rule_id,
                     title=item.title,
                     category=item.category,
@@ -147,6 +194,7 @@ def execute_scan(db: Session, endpoint: Endpoint, profile: str) -> Scan:
             db.add(
                 Finding(
                     scan_id=scan.id,
+                    module=module,
                     rule_id=item.rule_id,
                     title=item.title,
                     category=item.category,

@@ -134,13 +134,42 @@ def project_detail(request: Request, project_id: int, db: Session = Depends(get_
 @router.post("/projects/{project_id}/endpoints")
 def endpoint_add(
     project_id: int,
-    url: str = Form(...),
+    kind: str = Form("rpc"),
+    url: str = Form(""),
+    address: str = Form(""),
+    chain_id: str = Form(""),
+    source_ref: str = Form(""),
+    crawl_budget: str = Form(""),
     db: Session = Depends(get_db),
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(404)
-    store.add_endpoint(db, project, url)
+    parsed_chain: int | None = None
+    if chain_id.strip():
+        try:
+            parsed_chain = int(chain_id.strip())
+        except ValueError as exc:
+            raise HTTPException(400, "chain_id must be an integer") from exc
+    parsed_budget: int | None = None
+    if crawl_budget.strip():
+        try:
+            parsed_budget = int(crawl_budget.strip())
+        except ValueError as exc:
+            raise HTTPException(400, "crawl_budget must be an integer") from exc
+    try:
+        store.add_endpoint(
+            db,
+            project,
+            url=url.strip() or None,
+            kind=kind,
+            address=address.strip() or None,
+            chain_id=parsed_chain,
+            source_ref=source_ref.strip() or None,
+            crawl_budget=parsed_budget,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     return RedirectResponse(f"/admin/projects/{project_id}", status_code=303)
 
 
@@ -162,9 +191,16 @@ def scan_start(
     endpoint = db.query(Endpoint).filter(Endpoint.id == endpoint_id).first()
     if not endpoint:
         raise HTTPException(404)
-    if endpoint.is_third_party_provider:
+    if endpoint.kind == "rpc" and endpoint.is_third_party_provider:
         raise HTTPException(400, "Cannot scan third-party provider endpoint")
-    scan = store.execute_scan(db, endpoint, profile)
+    if endpoint.kind == "contract":
+        raise HTTPException(400, "Contract scanner is not implemented yet")
+    if not endpoint.scanable:
+        raise HTTPException(400, "Target cannot be scanned")
+    try:
+        scan = store.execute_scan(db, endpoint, profile)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     return RedirectResponse(f"/admin/scans/{scan.id}", status_code=303)
 
 

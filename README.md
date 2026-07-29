@@ -1,39 +1,43 @@
 # Dapptility
 
-Web3 RPC security scanner and productized security assessment platform.
+Personal professional scanner for **web**, **EVM JSON-RPC**, and **smart contracts**.
 
-**Domain:** [dapptility.com](https://dapptility.com)
+Local-first console for projects you operate or are authorized to assess. No public signup, payments, or marketing surface.
 
 ## Overview
 
-Dapptility assesses the external security posture of EVM JSON-RPC infrastructure from an attacker's perspective — without agents, SSH, or internal credentials.
+Three scanners, one workspace:
 
-Two acquisition paths:
+| Module | What it assesses |
+|---|---|
+| **Web** | External HTTP/TLS posture of project sites (headers, TLS, security.txt, …) |
+| **RPC** | Public EVM JSON-RPC endpoints from an external attacker’s view |
+| **Smart contract** | On-chain contract surface via read-only RPC (code, proxies, ABI/Sourcify, heuristics) |
 
-1. **Outbound** — limited external review, private preliminary report, responsible disclosure outreach
-2. **Self-service** — free scan → DNS ownership verification → paid full report
+Safety defaults stay on: SSRF protections, request budgets, kill switch, clear report scope.
 
 ## Repository layout
 
 ```
-docs/           Product and planning documents
-scanner/        EVM RPC scan engine (Milestone 1)
-app/            Admin panel, reports, and persistence (Milestone 2)
+docs/           Scope and development docs
+scanner/        Scan engines + CLI
+app/            Personal console, persistence, reports
 ```
 
-## MVP focus
+## Scope
 
-See [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md) for the full product scope. Current build order:
+See [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md). Build order:
 
-1. Scanner CLI with `Free` and `Outbound` profiles — **done**
-2. Reports and admin panel — **done** (see [app/README.md](app/README.md))
-3. Public self-service (landing, accounts, free scan)
-4. DNS verification and USDC payment
-5. First sales
+1. RPC scanner CLI — **done**
+2. Console, projects, reports — **done** (RPC-focused today)
+3. Reposition as personal multi-scanner (docs + target model)
+4. Web scanner module
+5. Smart contract scanner module
+6. Unified project findings and reports
 
 ## Development
 
-### Scanner (Milestone 1)
+### Scanner
 
 ```bash
 cd scanner
@@ -45,7 +49,7 @@ pytest -q
 
 See [scanner/README.md](scanner/README.md).
 
-### Admin app (Milestone 2)
+### Console
 
 ```bash
 pip install -e "./scanner[dev]" -e "./app[dev]"
@@ -57,8 +61,6 @@ Open http://localhost:8000/admin (`admin` / your password).
 
 See [app/README.md](app/README.md) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-Public self-service and payments land in later milestones.
-
 ### Production (Docker + Caddy)
 
 ```bash
@@ -66,11 +68,7 @@ cp .env.example .env   # set admin password and secrets
 docker compose up -d --build
 ```
 
-HTTPS via Caddy on `dapptility.com`. See [docs/DOCKER.md](docs/DOCKER.md).
-
-## Policies
-
-Legal and policy pages (Terms, Privacy, Acceptable Use, Scan Safety) will be added before public launch.
+See [docs/DOCKER.md](docs/DOCKER.md).
 
 ## License
 

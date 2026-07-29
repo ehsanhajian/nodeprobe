@@ -47,7 +47,16 @@ class Endpoint(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
-    url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    # website | rpc | contract
+    kind: Mapped[str] = mapped_column(String(32), default="rpc")
+    url: Mapped[str | None] = mapped_column(String(1024))
+    # contract targets
+    address: Mapped[str | None] = mapped_column(String(128))
+    chain_id: Mapped[int | None] = mapped_column(Integer)
+    abi_json: Mapped[str | None] = mapped_column(Text)
+    source_ref: Mapped[str | None] = mapped_column(String(512))
+    # website optional crawl budget (pages)
+    crawl_budget: Mapped[int | None] = mapped_column(Integer)
     is_third_party_provider: Mapped[bool] = mapped_column(Boolean, default=False)
     provider_name: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(
@@ -57,12 +66,31 @@ class Endpoint(Base):
     project: Mapped[Project] = relationship(back_populates="endpoints")
     scans: Mapped[list["Scan"]] = relationship(back_populates="endpoint")
 
+    @property
+    def label(self) -> str:
+        if self.kind == "contract":
+            addr = self.address or ""
+            if self.chain_id is not None:
+                return f"{addr} (chain {self.chain_id})"
+            return addr or self.url or "contract"
+        return self.url or ""
+
+    @property
+    def scanable(self) -> bool:
+        if self.kind == "contract":
+            return False  # scanner module not wired yet
+        if self.kind == "rpc" and self.is_third_party_provider:
+            return False
+        return bool(self.url)
+
 
 class Scan(Base):
     __tablename__ = "scans"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     endpoint_id: Mapped[int] = mapped_column(ForeignKey("endpoints.id"), nullable=False)
+    # web | rpc | contract
+    module: Mapped[str] = mapped_column(String(32), default="rpc")
     profile: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(String(32), default="queued")
     score: Mapped[int | None] = mapped_column(Integer)
@@ -89,6 +117,8 @@ class Finding(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     scan_id: Mapped[int] = mapped_column(ForeignKey("scans.id"), nullable=False)
+    # web | rpc | contract
+    module: Mapped[str] = mapped_column(String(32), default="rpc")
     rule_id: Mapped[str] = mapped_column(String(64), nullable=False)
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     category: Mapped[str] = mapped_column(String(128))
@@ -196,8 +226,41 @@ engine = create_engine(
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
+def _ensure_sqlite_columns() -> None:
+    """Additive SQLite migrations for existing personal DBs (no Alembic yet)."""
+    if not settings.database_url.startswith("sqlite"):
+        return
+
+    alterations: list[tuple[str, str, str]] = [
+        ("endpoints", "kind", "VARCHAR(32) DEFAULT 'rpc'"),
+        ("endpoints", "address", "VARCHAR(128)"),
+        ("endpoints", "chain_id", "INTEGER"),
+        ("endpoints", "abi_json", "TEXT"),
+        ("endpoints", "source_ref", "VARCHAR(512)"),
+        ("endpoints", "crawl_budget", "INTEGER"),
+        ("scans", "module", "VARCHAR(32) DEFAULT 'rpc'"),
+        ("findings", "module", "VARCHAR(32) DEFAULT 'rpc'"),
+    ]
+    with engine.begin() as conn:
+        for table, column, col_type in alterations:
+            existing = {
+                row[1]
+                for row in conn.exec_driver_sql(f"PRAGMA table_info({table})").fetchall()
+            }
+            if table not in {
+                r[0]
+                for r in conn.exec_driver_sql(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()
+            }:
+                continue
+            if column not in existing:
+                conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+
+
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
+    _ensure_sqlite_columns()
 
 
 def get_db():

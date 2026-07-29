@@ -57,7 +57,7 @@ def auth():
 
 @pytest.fixture()
 def mock_scan(monkeypatch):
-    def _mock(url: str, profile: str):
+    def _mock(url: str, profile: str, *, kind: str = "rpc"):
         return make_scan_result(url, profile)
 
     monkeypatch.setattr("dapptility_app.services.store.run_scan_for_endpoint", _mock)
@@ -175,3 +175,59 @@ def test_third_party_endpoint_blocked(client, auth):
         auth=auth,
     )
     assert r.status_code == 400
+
+
+def test_multi_target_kinds(client, auth, mock_scan):
+    r = client.post(
+        "/admin/projects/new",
+        data={"name": "Multi Target"},
+        auth=auth,
+        follow_redirects=False,
+    )
+    project_id = int(r.headers["location"].split("/")[-1])
+
+    r = client.post(
+        f"/admin/projects/{project_id}/endpoints",
+        data={"kind": "web", "url": "https://app.example"},
+        auth=auth,
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+
+    r = client.post(
+        f"/admin/projects/{project_id}/endpoints",
+        data={"kind": "rpc", "url": "https://rpc.app.example"},
+        auth=auth,
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+
+    r = client.post(
+        f"/admin/projects/{project_id}/endpoints",
+        data={"kind": "contract", "address": "0x" + "ab" * 20, "chain_id": "1"},
+        auth=auth,
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+
+    db = database.SessionLocal()
+    endpoints = db.query(Endpoint).filter_by(project_id=project_id).all()
+    kinds = sorted(ep.kind for ep in endpoints)
+    assert kinds == ["contract", "rpc", "web"]
+    web = next(ep for ep in endpoints if ep.kind == "web")
+    assert web.scanable is True
+    contract = next(ep for ep in endpoints if ep.kind == "contract")
+    assert contract.scanable is False
+    assert contract.address.startswith("0x")
+
+    r = client.post(
+        f"/admin/endpoints/{web.id}/scan",
+        data={"profile": "Free"},
+        auth=auth,
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    scan_id = int(r.headers["location"].split("/")[-1])
+    scan = db.query(Scan).filter_by(id=scan_id).first()
+    assert scan.module == "web"
+    db.close()
