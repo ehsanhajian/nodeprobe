@@ -29,8 +29,9 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         .all()
     )
     return templates.TemplateResponse(
+        request,
         "admin/dashboard.html",
-        {"request": request, "stats": stats, "recent_scans": recent_scans},
+        {"stats": stats, "recent_scans": recent_scans},
     )
 
 
@@ -38,14 +39,15 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
 def projects_list(request: Request, db: Session = Depends(get_db)):
     projects = db.query(Project).filter(Project.archived.is_(False)).order_by(Project.created_at.desc()).all()
     return templates.TemplateResponse(
+        request,
         "admin/projects.html",
-        {"request": request, "projects": projects},
+        {"projects": projects},
     )
 
 
 @router.get("/projects/new")
 def project_new(request: Request):
-    return templates.TemplateResponse("admin/project_form.html", {"request": request, "project": None})
+    return templates.TemplateResponse(request, "admin/project_form.html", {"project": None})
 
 
 @router.post("/projects/new")
@@ -83,8 +85,9 @@ def project_detail(request: Request, project_id: int, db: Session = Depends(get_
     endpoints = db.query(Endpoint).filter(Endpoint.project_id == project_id).all()
     reports = db.query(Report).filter(Report.project_id == project_id).order_by(Report.created_at.desc()).all()
     return templates.TemplateResponse(
+        request,
         "admin/project_detail.html",
-        {"request": request, "project": project, "endpoints": endpoints, "reports": reports},
+        {"project": project, "endpoints": endpoints, "reports": reports},
     )
 
 
@@ -140,8 +143,9 @@ def scan_detail(request: Request, scan_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404)
     raw_available = store.load_raw_scan(scan) is not None
     return templates.TemplateResponse(
+        request,
         "admin/scan_detail.html",
-        {"request": request, "scan": scan, "raw_available": raw_available},
+        {"scan": scan, "raw_available": raw_available},
     )
 
 
@@ -210,8 +214,9 @@ def report_detail(request: Request, report_id: int, db: Session = Depends(get_db
     if not report:
         raise HTTPException(404)
     return templates.TemplateResponse(
+        request,
         "admin/report_detail.html",
-        {"request": request, "report": report},
+        {"report": report},
     )
 
 
