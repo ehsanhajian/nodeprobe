@@ -39,6 +39,8 @@ def run_discovery_sync(db: Session, *, actor: str = "system") -> DiscoveryRun:
         promoted_count = 0
 
         for candidate in candidates:
+            if candidate.is_testnet:
+                continue
             normalized = normalize_rpc_url(candidate.rpc_url)
             provider = detect_provider(candidate.rpc_url)
             is_third_party = provider is not None

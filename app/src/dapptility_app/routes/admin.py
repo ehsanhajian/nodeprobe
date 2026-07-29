@@ -288,7 +288,9 @@ def discovery_list(
     page: int = 1,
 ):
     page = max(1, page)
-    base_query = db.query(DiscoveredLead).order_by(
+    base_query = db.query(DiscoveredLead).filter(
+        DiscoveredLead.is_testnet == False,  # noqa: E712
+    ).order_by(
         DiscoveredLead.lead_score.desc(),
         DiscoveredLead.id.desc(),
     )
@@ -305,11 +307,12 @@ def discovery_list(
         .all()
     )
 
+    _mainnet_filter = DiscoveredLead.is_testnet == False  # noqa: E712
     status_counts = {
-        "new": db.query(DiscoveredLead).filter(DiscoveredLead.status == "new").count(),
-        "promoted": db.query(DiscoveredLead).filter(DiscoveredLead.status == "promoted").count(),
-        "dismissed": db.query(DiscoveredLead).filter(DiscoveredLead.status == "dismissed").count(),
-        "all": db.query(DiscoveredLead).count(),
+        "new": db.query(DiscoveredLead).filter(_mainnet_filter, DiscoveredLead.status == "new").count(),
+        "promoted": db.query(DiscoveredLead).filter(_mainnet_filter, DiscoveredLead.status == "promoted").count(),
+        "dismissed": db.query(DiscoveredLead).filter(_mainnet_filter, DiscoveredLead.status == "dismissed").count(),
+        "all": db.query(DiscoveredLead).filter(_mainnet_filter).count(),
     }
     runs = db.query(DiscoveryRun).order_by(DiscoveryRun.started_at.desc()).limit(5).all()
     last_run = runs[0] if runs else None
