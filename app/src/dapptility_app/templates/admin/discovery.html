@@ -1,80 +1,252 @@
 {% extends "admin/base.html" %}
 {% block title %}Discovery — Dapptility{% endblock %}
 {% block content %}
-<div style="display:flex;justify-content:space-between;align-items:center;">
-  <h1>Discovery inbox</h1>
+<div class="discovery-page">
+
+<div class="page-header">
+  <div>
+    <h1>Discovery inbox</h1>
+    <p class="subtitle muted">New EVM networks and RPC endpoints from ChainList, scored for outbound outreach.</p>
+  </div>
   <form method="post" action="/admin/discovery/run">
     <button class="btn" type="submit">Run discovery now</button>
   </form>
 </div>
-<p class="muted">Daily ChainList sync finds new EVM networks and RPC endpoints, scores them, and auto-promotes high-value leads.</p>
 
-<div class="card">
-  <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
-    <a href="/admin/discovery?status=new" class="btn {% if status == 'new' %}secondary{% endif %}">New</a>
-    <a href="/admin/discovery?status=promoted" class="btn {% if status == 'promoted' %}secondary{% endif %}">Promoted</a>
-    <a href="/admin/discovery?status=dismissed" class="btn {% if status == 'dismissed' %}secondary{% endif %}">Dismissed</a>
-    <a href="/admin/discovery?status=all" class="btn {% if status == 'all' %}secondary{% endif %}">All</a>
+<div class="grid" style="margin-bottom:1rem;">
+  <div class="card" style="margin:0;">
+    <div class="muted">New leads</div>
+    <div class="stat">{{ status_counts.new }}</div>
   </div>
-  <table>
-    <tr>
-      <th>Score</th>
-      <th>Network</th>
-      <th>RPC</th>
-      <th>Signals</th>
-      <th>Status</th>
-      <th>Actions</th>
-    </tr>
-    {% for lead in leads %}
-    <tr>
-      <td><strong>{{ lead.lead_score }}</strong></td>
-      <td>
-        {{ lead.chain_name }}<br>
-        <span class="muted">chain {{ lead.chain_id }}{% if lead.is_testnet %} · testnet{% endif %}</span>
-      </td>
-      <td style="max-width:280px;word-break:break-all;">
-        {{ lead.rpc_url }}
-        {% if lead.is_third_party_provider %}
-        <br><span class="badge">{{ lead.provider_name }}</span>
-        {% endif %}
-      </td>
-      <td class="muted" style="max-width:220px;">
-        <ul style="margin:0;padding-left:1.1rem;">
-        {% for reason in lead|score_reasons %}
-          <li>{{ reason }}</li>
-        {% else %}
-          <li>—</li>
-        {% endfor %}
-        </ul>
-      </td>
-      <td>{{ lead.status }}</td>
-      <td>
-        {% if lead.status == 'new' and not lead.is_third_party_provider %}
-        <form method="post" action="/admin/discovery/{{ lead.id }}/promote" style="display:inline;">
-          <button class="btn" type="submit">Promote</button>
-        </form>
-        <form method="post" action="/admin/discovery/{{ lead.id }}/dismiss" style="display:inline;">
-          <button class="btn secondary" type="submit">Dismiss</button>
-        </form>
-        {% elif lead.project_id %}
-        <a href="/admin/projects/{{ lead.project_id }}">View project</a>
-        {% else %}—{% endif %}
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="6" class="muted">No leads in this view. Run discovery to import from ChainList.</td></tr>
-    {% endfor %}
-  </table>
+  <div class="card" style="margin:0;">
+    <div class="muted">Promoted</div>
+    <div class="stat">{{ status_counts.promoted }}</div>
+  </div>
+  <div class="card" style="margin:0;">
+    <div class="muted">Dismissed</div>
+    <div class="stat">{{ status_counts.dismissed }}</div>
+  </div>
+  <div class="card" style="margin:0;">
+    <div class="muted">Last sync</div>
+    <div class="stat" style="font-size:1rem;line-height:1.4;padding-top:0.4rem;">
+      {% if last_run and last_run.finished_at %}
+        {{ last_run.finished_at.strftime('%b %d, %H:%M UTC') }}
+        <div class="muted" style="font-size:0.8rem;font-weight:400;">{{ last_run.leads_new }} new · {{ last_run.leads_promoted }} auto-promoted</div>
+      {% else %}
+        <span class="muted" style="font-size:0.95rem;">Not run yet</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="info-panel">
+  <h3>How this works</h3>
+  <div class="info-grid">
+    <div class="info-item">
+      <strong>Lead score (0–100)</strong>
+      <p>
+        An automated outreach priority score. Higher = more likely a project-run RPC worth contacting.
+        Own-domain RPC (+35), mainnet (+25), HTTPS (+10), and domain alignment (+15) increase the score.
+        Testnets (−25) and known providers like Alchemy (−50) lower it.
+        Scores <strong>≥ 70</strong> are auto-promoted to projects.
+      </p>
+    </div>
+    <div class="info-item">
+      <strong>Promote</strong>
+      <p>
+        Creates an <em>outbound project</em> with this chain's RPC endpoint pre-filled,
+        so you can run a limited scan, review findings, and draft outreach.
+        Use this when a lead looks worth pursuing manually.
+      </p>
+    </div>
+    <div class="info-item">
+      <strong>Dismiss</strong>
+      <p>
+        Hides the lead from the New queue without creating a project.
+        Dismissed leads stay in ChainList sync but won't clutter your inbox.
+      </p>
+    </div>
+  </div>
 </div>
 
 <div class="card">
-  <h2>Recent discovery runs</h2>
+  <nav class="tabs" aria-label="Filter by status">
+    {% set tabs = [
+      ('new', 'New'),
+      ('promoted', 'Promoted'),
+      ('dismissed', 'Dismissed'),
+      ('all', 'All'),
+    ] %}
+    {% for tab_status, tab_label in tabs %}
+    <a href="/admin/discovery?status={{ tab_status }}&page=1"
+       class="tab {% if status == tab_status %}active{% endif %}">
+      {{ tab_label }}<span class="count">({{ status_counts[tab_status] }})</span>
+    </a>
+    {% endfor %}
+  </nav>
+
+  <div class="table-meta">
+    <span class="muted">
+      {% if total == 0 %}
+        No leads in this view
+      {% else %}
+        Showing {{ (page - 1) * page_size + 1 }}–{{ [page * page_size, total]|min }} of {{ total }}
+        · sorted by score (highest first)
+      {% endif %}
+    </span>
+    <span class="muted">Page {{ page }} of {{ total_pages }}</span>
+  </div>
+
   <table>
-    <tr><th>ID</th><th>Status</th><th>Chains</th><th>RPCs</th><th>New</th><th>Updated</th><th>Promoted</th><th>Started</th></tr>
+    <thead>
+      <tr>
+        <th style="width:4.5rem;">Score</th>
+        <th>Network</th>
+        <th>RPC endpoint</th>
+        <th>Signals</th>
+        <th style="width:5.5rem;">Status</th>
+        <th style="width:8rem;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for lead in leads %}
+    {% set tier = lead.lead_score|score_tier %}
+    <tr>
+      <td>
+        <div class="score-badge {{ tier }}" title="Lead score: outreach priority 0–100">
+          <span class="value">{{ lead.lead_score }}</span>
+          <span class="tier">{{ tier }}</span>
+        </div>
+      </td>
+      <td>
+        <div class="network-name">{{ lead.chain_name }}</div>
+        <div class="network-meta muted">
+          Chain ID {{ lead.chain_id }}
+          {% if lead.is_testnet %}<span class="badge warn">Testnet</span>{% else %}<span class="badge ok">Mainnet</span>{% endif %}
+        </div>
+        {% if lead.website %}
+        <div class="network-meta"><a href="{{ lead.website }}" target="_blank" rel="noopener">{{ lead.website }}</a></div>
+        {% endif %}
+      </td>
+      <td>
+        <div class="rpc-url">{{ lead.rpc_url }}</div>
+        {% if lead.is_third_party_provider %}
+        <div style="margin-top:0.35rem;"><span class="badge warn">{{ lead.provider_name or 'Third-party' }}</span></div>
+        {% endif %}
+      </td>
+      <td>
+        <div class="chip-list">
+        {% for reason in lead|score_reasons %}
+          {% if 'not a known provider' in reason or 'Mainnet' in reason or 'aligns' in reason or 'Newly discovered' in reason %}
+          <span class="chip positive">{{ reason }}</span>
+          {% elif 'Testnet' in reason or 'third-party' in reason or 'Hosted on' in reason %}
+          <span class="chip negative">{{ reason }}</span>
+          {% else %}
+          <span class="chip">{{ reason }}</span>
+          {% endif %}
+        {% else %}
+          <span class="muted">—</span>
+        {% endfor %}
+        </div>
+      </td>
+      <td>
+        <span class="status-pill {{ lead.status }}">{{ lead.status }}</span>
+      </td>
+      <td>
+        <div class="actions">
+        {% if lead.status == 'new' and not lead.is_third_party_provider %}
+        <form method="post" action="/admin/discovery/{{ lead.id }}/promote">
+          <button class="btn sm" type="submit" title="Create outbound project with this RPC">Promote to project</button>
+        </form>
+        <form method="post" action="/admin/discovery/{{ lead.id }}/dismiss">
+          <input type="hidden" name="status" value="{{ status }}">
+          <input type="hidden" name="page" value="{{ page }}">
+          <button class="btn sm ghost" type="submit">Dismiss</button>
+        </form>
+        {% elif lead.project_id %}
+        <a class="btn sm secondary" href="/admin/projects/{{ lead.project_id }}">View project</a>
+        {% elif lead.is_third_party_provider %}
+        <span class="muted" style="font-size:0.8rem;">Provider-hosted — cannot promote</span>
+        {% else %}
+        <span class="muted">—</span>
+        {% endif %}
+        </div>
+      </td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="6" style="padding:2rem;text-align:center;" class="muted">
+        No leads in this view.
+        {% if status == 'new' %}Click <strong>Run discovery now</strong> to import from ChainList.{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if total_pages > 1 %}
+  <nav class="pagination" aria-label="Pagination">
+    <div class="muted" style="font-size:0.85rem;">
+      {{ page_size }} per page
+    </div>
+    <div class="pages">
+      {% if page > 1 %}
+      <a class="page-link" href="/admin/discovery?status={{ status }}&page={{ page - 1 }}" aria-label="Previous page">‹</a>
+      {% else %}
+      <span class="page-link disabled">‹</span>
+      {% endif %}
+
+      {% set window = 2 %}
+      {% set start_page = [1, page - window]|max %}
+      {% set end_page = [total_pages, page + window]|min %}
+
+      {% if start_page > 1 %}
+      <a class="page-link" href="/admin/discovery?status={{ status }}&page=1">1</a>
+      {% if start_page > 2 %}<span class="page-link disabled">…</span>{% endif %}
+      {% endif %}
+
+      {% for p in range(start_page, end_page + 1) %}
+      <a class="page-link {% if p == page %}active{% endif %}"
+         href="/admin/discovery?status={{ status }}&page={{ p }}">{{ p }}</a>
+      {% endfor %}
+
+      {% if end_page < total_pages %}
+      {% if end_page < total_pages - 1 %}<span class="page-link disabled">…</span>{% endif %}
+      <a class="page-link" href="/admin/discovery?status={{ status }}&page={{ total_pages }}">{{ total_pages }}</a>
+      {% endif %}
+
+      {% if page < total_pages %}
+      <a class="page-link" href="/admin/discovery?status={{ status }}&page={{ page + 1 }}" aria-label="Next page">›</a>
+      {% else %}
+      <span class="page-link disabled">›</span>
+      {% endif %}
+    </div>
+  </nav>
+  {% endif %}
+</div>
+
+<details class="card" style="cursor:pointer;">
+  <summary style="font-weight:600;cursor:pointer;">Recent discovery runs</summary>
+  <table class="runs-table" style="margin-top:0.75rem;">
+    <thead>
+      <tr>
+        <th>Run</th><th>Status</th><th>Chains</th><th>RPCs scanned</th>
+        <th>New</th><th>Updated</th><th>Auto-promoted</th><th>Started</th>
+      </tr>
+    </thead>
+    <tbody>
     {% for run in runs %}
     <tr>
       <td>#{{ run.id }}</td>
-      <td>{{ run.status }}</td>
+      <td>
+        {% if run.status == 'completed' %}
+        <span class="badge ok">{{ run.status }}</span>
+        {% elif run.status == 'failed' %}
+        <span class="badge critical">{{ run.status }}</span>
+        {% else %}
+        <span class="badge neutral">{{ run.status }}</span>
+        {% endif %}
+      </td>
       <td>{{ run.chains_seen }}</td>
       <td>{{ run.rpc_candidates }}</td>
       <td>{{ run.leads_new }}</td>
@@ -85,6 +257,9 @@
     {% else %}
     <tr><td colspan="8" class="muted">No runs yet.</td></tr>
     {% endfor %}
+    </tbody>
   </table>
+</details>
+
 </div>
 {% endblock %}

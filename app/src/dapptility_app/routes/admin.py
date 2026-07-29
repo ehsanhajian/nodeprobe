@@ -28,6 +28,19 @@ def _score_reasons(lead: DiscoveredLead) -> list[str]:
 
 templates.env.filters["score_reasons"] = _score_reasons
 
+DISCOVERY_PAGE_SIZE = 25
+
+
+def _score_tier(score: int) -> str:
+    if score >= 70:
+        return "high"
+    if score >= 40:
+        return "medium"
+    return "low"
+
+
+templates.env.filters["score_tier"] = _score_tier
+
 router = APIRouter(prefix="/admin", dependencies=[Depends(verify_admin)])
 
 
@@ -268,16 +281,53 @@ def report_pdf_download(report_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/discovery")
-def discovery_list(request: Request, db: Session = Depends(get_db), status: str = "new"):
-    query = db.query(DiscoveredLead).order_by(DiscoveredLead.lead_score.desc())
+def discovery_list(
+    request: Request,
+    db: Session = Depends(get_db),
+    status: str = "new",
+    page: int = 1,
+):
+    page = max(1, page)
+    base_query = db.query(DiscoveredLead).order_by(
+        DiscoveredLead.lead_score.desc(),
+        DiscoveredLead.id.desc(),
+    )
     if status != "all":
-        query = query.filter(DiscoveredLead.status == status)
-    leads = query.limit(200).all()
-    runs = db.query(DiscoveryRun).order_by(DiscoveryRun.started_at.desc()).limit(10).all()
+        base_query = base_query.filter(DiscoveredLead.status == status)
+
+    total = base_query.count()
+    total_pages = max(1, (total + DISCOVERY_PAGE_SIZE - 1) // DISCOVERY_PAGE_SIZE)
+    if page > total_pages:
+        page = total_pages
+    leads = (
+        base_query.offset((page - 1) * DISCOVERY_PAGE_SIZE)
+        .limit(DISCOVERY_PAGE_SIZE)
+        .all()
+    )
+
+    status_counts = {
+        "new": db.query(DiscoveredLead).filter(DiscoveredLead.status == "new").count(),
+        "promoted": db.query(DiscoveredLead).filter(DiscoveredLead.status == "promoted").count(),
+        "dismissed": db.query(DiscoveredLead).filter(DiscoveredLead.status == "dismissed").count(),
+        "all": db.query(DiscoveredLead).count(),
+    }
+    runs = db.query(DiscoveryRun).order_by(DiscoveryRun.started_at.desc()).limit(5).all()
+    last_run = runs[0] if runs else None
+
     return templates.TemplateResponse(
         request,
         "admin/discovery.html",
-        {"leads": leads, "runs": runs, "status": status},
+        {
+            "leads": leads,
+            "runs": runs,
+            "last_run": last_run,
+            "status": status,
+            "page": page,
+            "total": total,
+            "total_pages": total_pages,
+            "page_size": DISCOVERY_PAGE_SIZE,
+            "status_counts": status_counts,
+        },
     )
 
 
@@ -299,9 +349,14 @@ def discovery_promote(lead_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/discovery/{lead_id}/dismiss")
-def discovery_dismiss(lead_id: int, db: Session = Depends(get_db)):
+def discovery_dismiss(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    status: str = Form("new"),
+    page: int = Form(1),
+):
     lead = db.query(DiscoveredLead).filter(DiscoveredLead.id == lead_id).first()
     if not lead:
         raise HTTPException(404)
     dismiss_lead(db, lead, actor="admin")
-    return RedirectResponse("/admin/discovery", status_code=303)
+    return RedirectResponse(f"/admin/discovery?status={status}&page={page}", status_code=303)
