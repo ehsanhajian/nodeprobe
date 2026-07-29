@@ -52,6 +52,7 @@ class Rule(ABC):
         kind: CheckKind | None = None,
         description: str | None = None,
         score_impact: int | None = None,
+        parent_rule_id: str | None = None,
     ) -> Finding:
         return Finding(
             rule_id=self.meta.rule_id,
@@ -66,4 +67,5 @@ class Rule(ABC):
             remediation=self.meta.remediation,
             references=list(self.meta.references),
             score_impact=self.meta.score_impact if score_impact is None else score_impact,
+            parent_rule_id=parent_rule_id,
         )

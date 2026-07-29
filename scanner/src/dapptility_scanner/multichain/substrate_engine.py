@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from dapptility_scanner import __version__, killswitch
+from dapptility_scanner.escalation import SUBSTRATE_SIBLINGS, run_method_sibling_escalations
 from dapptility_scanner.killswitch import KillSwitchActive
 from dapptility_scanner.models import CheckKind, ScanError, ScanProfile, ScanResult, Severity
 from dapptility_scanner.multichain.common import (
@@ -185,6 +186,16 @@ class SubstrateScannerEngine:
                                 score_impact=impact,
                             )
                         )
+
+                findings_so_far, _ = split_findings(produced)
+                produced.extend(
+                    run_method_sibling_escalations(
+                        client,
+                        findings_so_far,
+                        siblings_by_method=SUBSTRATE_SIBLINGS,
+                        rule_prefix="substrate",
+                    )
+                )
 
                 requests_made = client.requests_made
 

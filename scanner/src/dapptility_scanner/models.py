@@ -45,6 +45,7 @@ class Finding:
     remediation: str = ""
     references: list[str] = field(default_factory=list)
     score_impact: int = 0
+    parent_rule_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)

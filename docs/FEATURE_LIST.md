@@ -81,15 +81,23 @@ Findings use the same severity/confidence model as RPC.
 
 ## 4. RPC Scanner (multi-chain)
 
-**EVM** (`scan` / `rpc --family evm`): chain ID / identity / client version, privileged namespaces, TLS/HTTP hygiene, provider detection, Deep enrichment.
-
-**Solana** (`solana` / `rpc --family solana`): getHealth/version/slot, getIdentity disclosure, getClusterNodes (Deep), sensitive method probes.
-
-**Substrate / Polkadot** (`substrate`): system_chain/health, rpc_methods catalog, sensitive author/offchain method probes.
-
-**Cosmos / Tendermint** (`cosmos`): status identity, net_info peers, unsafe method probes (JSON-RPC + REST fallback).
+| Family | CLI | What it checks |
+|---|---|---|
+| **EVM** | `scan` / `rpc --family evm` | Chain ID, client, privileged namespaces, TLS/HTTP, provider detection, Deep enrichment |
+| **Solana** | `solana` / `rpc --family solana` | getHealth/version/slot, getIdentity, getClusterNodes (Deep), sensitive methods |
+| **Substrate / Polkadot** | `substrate` / `rpc --family substrate` | system_chain/health, rpc_methods catalog, author/offchain probes |
+| **Cosmos / Tendermint** | `cosmos` / `rpc --family cosmos` | status identity, net_info peers, unsafe methods (JSON-RPC + REST fallback) |
 
 Auto-detect: `dapptility-scan rpc <url>` (or `--family auto|evm|solana|substrate|cosmos`).
+
+### Adaptive escalation (Standard / Deep)
+
+When a High/Critical namespace (or sensitive-method) finding appears, the scanner runs **bounded follow-ups** to confirm impact:
+
+- EVM: e.g. `eth_accounts` → empty vs disclosed accounts; `admin_nodeInfo` → truncated metadata; sibling namespace probes
+- Solana / Substrate / Cosmos: sibling privileged-method confirms
+
+Quick profile skips escalation. Follow-ups share the same request budget and never send exploit/write payloads. Child findings set `parent_rule_id` and appear as “escalation of …” in the human report.
 
 WebSocket RPC and non-EVM program/contract analysis: later.
 

@@ -6,6 +6,7 @@ from typing import Any
 import httpx
 
 from dapptility_scanner import __version__, killswitch
+from dapptility_scanner.escalation import run_evm_escalations
 from dapptility_scanner.killswitch import KillSwitchActive
 from dapptility_scanner.models import CheckKind, ScanError, ScanProfile, ScanResult
 from dapptility_scanner.profiles import ProfileLimits, get_profile
@@ -119,6 +120,25 @@ class ScannerEngine:
                             expected.append(item)
                         else:
                             findings.append(item)
+
+                # Adaptive escalation: confirm impact of High/Critical namespace hits
+                if not aborted:
+                    try:
+                        killswitch.check()
+                        for item in run_evm_escalations(client, context, findings):
+                            if item.kind == CheckKind.EXPECTED_SURFACE:
+                                expected.append(item)
+                            else:
+                                findings.append(item)
+                    except (BudgetExceeded, KillSwitchActive) as exc:
+                        aborted = True
+                        abort_reason = str(exc)
+                        errors.append(ScanError(code="aborted", message=str(exc)))
+                    except Exception as exc:  # noqa: BLE001
+                        errors.append(
+                            ScanError(code="escalation_error", message=str(exc))
+                        )
+
                 requests_made = client.requests_made
                 chain_id = context.get("chain_id")
                 network_name = context.get("network_name")

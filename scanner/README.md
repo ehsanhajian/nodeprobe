@@ -32,6 +32,11 @@ dapptility-scan solana https://api.mainnet-beta.solana.com
 dapptility-scan substrate https://rpc.polkadot.io
 dapptility-scan cosmos https://rpc.cosmos.directory:443
 
+# Same via auto-detect / --family
+dapptility-scan rpc https://api.mainnet-beta.solana.com
+dapptility-scan rpc https://rpc.polkadot.io --family substrate
+dapptility-scan rpc https://rpc.cosmos.directory:443 --family cosmos
+
 # Website + EVM contract
 dapptility-scan web https://example.com
 dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1
@@ -49,6 +54,7 @@ Human-readable report is the default on stdout (ANSI colors when stdout is a TTY
 ## Safety
 
 - Multi-chain RPC: EVM (any chain ID), Solana, Substrate/Polkadot, Cosmos/Tendermint
+- Adaptive escalation on Standard/Deep after High/Critical hits (confirm impact / sibling methods; budgeted)
 - EVM names from a bundled [Chainlist](https://chainid.network) snapshot; unknown IDs use `Chain <id>`
 - SSRF / private IP / metadata / localhost blocking
 - Redirect refusal to unsafe targets

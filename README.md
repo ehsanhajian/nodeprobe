@@ -9,7 +9,7 @@ Local-first console for projects you operate or are authorized to assess. No pub
 | Module | What it assesses |
 |---|---|
 | **Web** | External HTTP/TLS posture (headers, certificate, security.txt, robots.txt, …) |
-| **RPC** | Public RPC surface for **EVM**, **Solana**, **Substrate/Polkadot**, and **Cosmos/Tendermint** |
+| **RPC** | Public RPC for **EVM**, **Solana**, **Substrate/Polkadot**, and **Cosmos/Tendermint** (auto-detect or `scan` / `solana` / `substrate` / `cosmos`) |
 | **Smart contract** | Read-only EVM on-chain surface (code, proxies, bytecode heuristics, Sourcify/ABI hints) |
 
 Projects hold website, RPC, and contract targets. Findings can be reviewed together and exported as a multi-module HTML/PDF report.
@@ -45,11 +45,14 @@ pip install -e ".[dev]"
 dapptility-scan profiles
 dapptility-scan rules --module all
 
-# Auto-detect RPC family (evm | solana | substrate | cosmos)
-dapptility-scan rpc https://api.mainnet-beta.solana.com
-dapptility-scan rpc https://rpc.polkadot.io --family substrate
+# Multi-chain RPC (auto-detect or explicit family / command)
+dapptility-scan rpc https://YOUR_RPC                          # auto: evm|solana|substrate|cosmos
 dapptility-scan scan https://rpc.example.com --profile Standard   # EVM
 dapptility-scan solana https://api.mainnet-beta.solana.com
+dapptility-scan substrate https://rpc.polkadot.io
+dapptility-scan cosmos https://rpc.cosmos.directory:443
+dapptility-scan rpc https://rpc.polkadot.io --family substrate    # same as substrate command
+
 dapptility-scan web https://example.com
 dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1
 

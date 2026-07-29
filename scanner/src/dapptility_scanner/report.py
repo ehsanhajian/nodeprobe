@@ -168,9 +168,10 @@ def format_human_report(result: ScanResult, *, color: bool | None = None) -> str
                 enabled=enabled,
             )
             lines.append(f"{i}. {sev} {_paint(f.title, _Style.BOLD, enabled=enabled)}")
-            lines.append(
-                f"   {_paint(f'{f.rule_id} · {f.category} · {f.confidence.value}', _Style.DIM, enabled=enabled)}"
-            )
+            meta = f"{f.rule_id} · {f.category} · {f.confidence.value}"
+            if f.parent_rule_id:
+                meta += f" · escalation of {f.parent_rule_id}"
+            lines.append(f"   {_paint(meta, _Style.DIM, enabled=enabled)}")
             lines.append(f"   {f.description}")
             if f.impact:
                 lines.append(

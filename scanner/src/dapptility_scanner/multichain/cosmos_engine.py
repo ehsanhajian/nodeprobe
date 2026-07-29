@@ -10,6 +10,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 
 from dapptility_scanner import __version__, killswitch
+from dapptility_scanner.escalation import COSMOS_SIBLINGS, run_method_sibling_escalations
 from dapptility_scanner.killswitch import KillSwitchActive
 from dapptility_scanner.models import CheckKind, ScanError, ScanProfile, ScanResult, Severity
 from dapptility_scanner.multichain.common import (
@@ -173,6 +174,16 @@ class CosmosScannerEngine:
                                 score_impact=impact,
                             )
                         )
+
+                findings_so_far, _ = split_findings(produced)
+                produced.extend(
+                    run_method_sibling_escalations(
+                        client,
+                        findings_so_far,
+                        siblings_by_method=COSMOS_SIBLINGS,
+                        rule_prefix="cosmos",
+                    )
+                )
 
                 requests_made = client.requests_made
 
