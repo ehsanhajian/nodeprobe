@@ -143,7 +143,13 @@ def run_discovery_sync(db: Session, *, actor: str = "system") -> DiscoveryRun:
     return run
 
 
-def promote_lead(db: Session, lead: DiscoveredLead, *, actor: str = "admin") -> Project | None:
+def promote_lead(
+    db: Session,
+    lead: DiscoveredLead,
+    *,
+    actor: str = "admin",
+    auto_scan: bool = True,
+) -> Project | None:
     if lead.status == "promoted" and lead.project_id:
         return db.query(Project).filter_by(id=lead.project_id).first()
     if lead.is_third_party_provider:
@@ -173,11 +179,24 @@ def promote_lead(db: Session, lead: DiscoveredLead, *, actor: str = "admin") -> 
             f"Score breakdown: {lead.score_breakdown_json}"
         ),
     )
-    store.add_endpoint(db, project, lead.rpc_url)
+    endpoint = store.add_endpoint(db, project, lead.rpc_url)
     lead.status = "promoted"
     lead.project_id = project.id
     db.commit()
     store.log_action(db, "discovery.promote", f"lead_id={lead.id} project_id={project.id}", actor=actor)
+
+    if auto_scan and not endpoint.is_third_party_provider:
+        try:
+            scan = store.execute_scan(db, endpoint, "Outbound")
+            store.log_action(
+                db,
+                "discovery.auto_scan",
+                f"lead_id={lead.id} scan_id={scan.id} status={scan.status}",
+                actor=actor,
+            )
+        except Exception:
+            logger.exception("Auto-scan failed for lead %s", lead.id)
+
     return project
 
 

@@ -110,10 +110,17 @@ def project_detail(request: Request, project_id: int, db: Session = Depends(get_
         raise HTTPException(404)
     endpoints = db.query(Endpoint).filter(Endpoint.project_id == project_id).all()
     reports = db.query(Report).filter(Report.project_id == project_id).order_by(Report.created_at.desc()).all()
+    scans = (
+        db.query(Scan)
+        .join(Endpoint)
+        .filter(Endpoint.project_id == project_id)
+        .order_by(Scan.created_at.desc())
+        .all()
+    )
     return templates.TemplateResponse(
         request,
         "admin/project_detail.html",
-        {"project": project, "endpoints": endpoints, "reports": reports},
+        {"project": project, "endpoints": endpoints, "reports": reports, "scans": scans},
     )
 
 

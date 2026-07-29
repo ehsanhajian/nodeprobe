@@ -134,7 +134,7 @@ def test_promote_lead_creates_project(db):
     )
     db.add(lead)
     db.commit()
-    project = promote_lead(db, lead)
+    project = promote_lead(db, lead, auto_scan=False)
     assert project is not None
     assert db.query(Project).count() == 1
     assert db.query(Endpoint).count() == 1

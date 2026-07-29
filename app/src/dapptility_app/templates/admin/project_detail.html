@@ -60,6 +60,31 @@
 </div>
 
 <div class="card">
+  <h2>Scans</h2>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Endpoint</th><th>Profile</th><th>Status</th><th>Score</th><th>Chain</th><th>Requests</th><th>Date</th></tr>
+    </thead>
+    <tbody>
+    {% for scan in scans %}
+    <tr>
+      <td><a href="/admin/scans/{{ scan.id }}">#{{ scan.id }}</a></td>
+      <td><span class="font-mono text-xs">{{ scan.endpoint.url[:40] }}{% if scan.endpoint.url|length > 40 %}…{% endif %}</span></td>
+      <td><span class="badge info">{{ scan.profile }}</span></td>
+      <td><span class="status-pill {{ scan.status }}">{{ scan.status }}</span></td>
+      <td>{% if scan.score is not none %}<strong>{{ scan.score }}</strong>{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td class="text-sm">{{ scan.network_name or '—' }}</td>
+      <td>{{ scan.requests_made }}</td>
+      <td class="muted text-sm">{{ scan.created_at.strftime('%Y-%m-%d %H:%M') if scan.created_at else '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="muted" style="text-align:center;padding:1.25rem;">No scans yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
   <h2>Reports</h2>
   <table>
     <thead>
