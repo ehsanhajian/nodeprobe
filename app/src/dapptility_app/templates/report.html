@@ -5,59 +5,224 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ report.title }}</title>
   <style>
-    body { font-family: Georgia, serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #111; line-height: 1.5; }
-    h1, h2 { font-family: system-ui, sans-serif; }
-    .meta { color: #555; font-size: 0.95rem; }
-    .score { font-size: 2rem; font-weight: bold; }
-    .scope { background: #f4f6f8; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
-    .finding { border-left: 4px solid #ccc; padding: 0.5rem 1rem; margin: 1rem 0; }
-    .finding.critical { border-color: #b91c1c; }
-    .finding.high { border-color: #c2410c; }
-    .finding.medium { border-color: #a16207; }
-    .finding.low { border-color: #1d4ed8; }
-    .badge { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
-    footer { margin-top: 2rem; color: #666; font-size: 0.85rem; }
+    :root {
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --surface: #f8fafc;
+      --accent: #2563eb;
+      --critical: #dc2626;
+      --high: #ea580c;
+      --medium: #ca8a04;
+      --low: #2563eb;
+      --info: #64748b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+      background: #fff;
+    }
+    .page { max-width: 820px; margin: 0 auto; padding: 2.5rem 1.5rem 3rem; }
+    .header {
+      border-bottom: 2px solid var(--text);
+      padding-bottom: 1.25rem;
+      margin-bottom: 1.75rem;
+    }
+    .brand {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: 1.65rem;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+    .meta { color: var(--muted); font-size: 0.92rem; margin: 0; }
+    .meta code {
+      font-family: ui-monospace, monospace;
+      font-size: 0.85rem;
+      background: var(--surface);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+    }
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+    }
+    .summary-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .summary-value { font-size: 1.35rem; font-weight: 700; }
+    .score-value { color: var(--accent); }
+    .severity-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0 1.5rem;
+    }
+    .severity-pill {
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .severity-pill.critical { color: var(--critical); border-color: #fecaca; background: #fef2f2; }
+    .severity-pill.high { color: var(--high); border-color: #fed7aa; background: #fff7ed; }
+    .severity-pill.medium { color: var(--medium); border-color: #fde68a; background: #fffbeb; }
+    .severity-pill.low { color: var(--low); border-color: #bfdbfe; background: #eff6ff; }
+    .scope {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin: 1.5rem 0;
+    }
+    .scope h2, section h2 {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 0.75rem;
+    }
+    .scope ul { margin: 0 0 1rem; padding-left: 1.2rem; }
+    .scope li { margin-bottom: 0.35rem; font-size: 0.92rem; }
+    .finding {
+      border: 1px solid var(--border);
+      border-left-width: 4px;
+      border-radius: 8px;
+      padding: 1rem 1.15rem;
+      margin: 0.85rem 0;
+      background: #fff;
+    }
+    .finding.critical { border-left-color: var(--critical); }
+    .finding.high { border-left-color: var(--high); }
+    .finding.medium { border-left-color: var(--medium); }
+    .finding.low { border-left-color: var(--low); }
+    .finding.info { border-left-color: var(--info); }
+    .finding h3 {
+      margin: 0.35rem 0 0.5rem;
+      font-size: 1rem;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+    }
+    .rule-id { color: var(--muted); font-weight: 400; font-size: 0.85rem; }
+    .remediation {
+      margin-top: 0.65rem;
+      padding: 0.65rem 0.75rem;
+      background: #f0fdf4;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      border: 1px solid #bbf7d0;
+    }
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    footer a { color: var(--accent); }
+    @media print {
+      .page { padding: 0; max-width: none; }
+      .finding { break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
-  <h1>{{ report.title }}</h1>
-  <p class="meta">
-    {{ project.name }} · {{ endpoint.url }}<br>
-    Scan profile: {{ scan.profile }} · Generated {{ generated_at }}
-  </p>
-  <p class="score">Security score: {{ scan.score }}/100</p>
-  <p class="meta">Chain: {{ scan.network_name or 'unknown' }} ({{ scan.chain_id }})</p>
+  <div class="page">
+    <header class="header">
+      <div class="brand">Dapptility Security Report</div>
+      <h1>{{ report.title }}</h1>
+      <p class="meta">
+        <strong>{{ project.name }}</strong><br>
+        Endpoint: <code>{{ endpoint.url }}</code><br>
+        Scan profile: {{ scan.profile }} · Generated {{ generated_at }}
+      </p>
+    </header>
 
-  <div class="scope">
-    <h2>What we did</h2>
-    <ul>{% for item in scope_did %}<li>{{ item }}</li>{% endfor %}</ul>
-    <h2>What we did not do</h2>
-    <ul>{% for item in scope_did_not %}<li>{{ item }}</li>{% endfor %}</ul>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Security score</div>
+        <div class="summary-value score-value">{{ scan.score }}/100</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Network</div>
+        <div class="summary-value" style="font-size:1rem;">{{ scan.network_name or 'Unknown' }}</div>
+        <div class="meta">Chain ID {{ scan.chain_id or '—' }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Findings</div>
+        <div class="summary-value">{{ findings|length }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Report type</div>
+        <div class="summary-value" style="font-size:1rem;text-transform:capitalize;">{{ report.report_type }}</div>
+      </div>
+    </div>
+
+    <div class="severity-bar">
+      {% if severity_counts.Critical %}<span class="severity-pill critical">{{ severity_counts.Critical }} Critical</span>{% endif %}
+      {% if severity_counts.High %}<span class="severity-pill high">{{ severity_counts.High }} High</span>{% endif %}
+      {% if severity_counts.Medium %}<span class="severity-pill medium">{{ severity_counts.Medium }} Medium</span>{% endif %}
+      {% if severity_counts.Low %}<span class="severity-pill low">{{ severity_counts.Low }} Low</span>{% endif %}
+      {% if severity_counts.Info %}<span class="severity-pill">{{ severity_counts.Info }} Info</span>{% endif %}
+    </div>
+
+    <div class="scope">
+      <h2>What we did</h2>
+      <ul>{% for item in scope_did %}<li>{{ item }}</li>{% endfor %}</ul>
+      <h2>What we did not do</h2>
+      <ul>{% for item in scope_did_not %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+
+    <section>
+      <h2>Findings</h2>
+      {% for f in findings %}
+      <article class="finding {{ f.severity|lower }}">
+        <div class="badge">{{ f.severity }} · {{ f.confidence }}</div>
+        <h3>{{ f.title }} <span class="rule-id">({{ f.rule_id }})</span></h3>
+        <p>{{ f.description }}</p>
+        {% if f.impact %}<p><strong>Impact:</strong> {{ f.impact }}</p>{% endif %}
+        {% if f.remediation %}<div class="remediation"><strong>Remediation:</strong> {{ f.remediation }}</div>{% endif %}
+      </article>
+      {% else %}
+      <p class="meta">No publishable findings for this report.</p>
+      {% endfor %}
+    </section>
+
+    <footer>
+      <strong>Dapptility</strong> · Confidential preliminary assessment<br>
+      Private report link: <a href="{{ report_url }}">{{ report_url }}</a>
+    </footer>
   </div>
-
-  <h2>Summary</h2>
-  <p>
-    Critical: {{ severity_counts.Critical }} ·
-    High: {{ severity_counts.High }} ·
-    Medium: {{ severity_counts.Medium }} ·
-    Low: {{ severity_counts.Low }} ·
-    Info: {{ severity_counts.Info }}
-  </p>
-
-  <h2>Findings</h2>
-  {% for f in findings %}
-  <div class="finding {{ f.severity|lower }}">
-    <div class="badge">{{ f.severity }} · {{ f.confidence }}</div>
-    <h3>{{ f.title }} <span class="meta">({{ f.rule_id }})</span></h3>
-    <p>{{ f.description }}</p>
-    {% if f.remediation %}<p><strong>Remediation:</strong> {{ f.remediation }}</p>{% endif %}
-  </div>
-  {% else %}
-  <p>No publishable findings for this report.</p>
-  {% endfor %}
-
-  <footer>
-    Dapptility · Confidential assessment · {{ report_url }}
-  </footer>
 </body>
 </html>

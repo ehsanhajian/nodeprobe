@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -205,3 +206,63 @@ def dismiss_lead(db: Session, lead: DiscoveredLead, *, actor: str = "admin") -> 
     db.commit()
     store.log_action(db, "discovery.dismiss", f"lead_id={lead.id}", actor=actor)
     return lead
+
+
+BATCH_LIMIT = 25
+
+
+@dataclass
+class BatchResult:
+    promoted: int = 0
+    dismissed: int = 0
+    skipped: int = 0
+
+
+def batch_dismiss_leads(
+    db: Session,
+    lead_ids: list[int],
+    *,
+    actor: str = "admin",
+) -> BatchResult:
+    result = BatchResult()
+    for lead_id in lead_ids[:BATCH_LIMIT]:
+        lead = db.query(DiscoveredLead).filter(DiscoveredLead.id == lead_id).first()
+        if not lead or lead.status != "new":
+            result.skipped += 1
+            continue
+        dismiss_lead(db, lead, actor=actor)
+        result.dismissed += 1
+    store.log_action(
+        db,
+        "discovery.batch_dismiss",
+        f"dismissed={result.dismissed} skipped={result.skipped}",
+        actor=actor,
+    )
+    return result
+
+
+def batch_promote_leads(
+    db: Session,
+    lead_ids: list[int],
+    *,
+    actor: str = "admin",
+    auto_scan: bool = False,
+) -> BatchResult:
+    result = BatchResult()
+    for lead_id in lead_ids[:BATCH_LIMIT]:
+        lead = db.query(DiscoveredLead).filter(DiscoveredLead.id == lead_id).first()
+        if not lead or lead.status != "new" or lead.is_third_party_provider:
+            result.skipped += 1
+            continue
+        project = promote_lead(db, lead, actor=actor, auto_scan=auto_scan)
+        if project is None:
+            result.skipped += 1
+            continue
+        result.promoted += 1
+    store.log_action(
+        db,
+        "discovery.batch_promote",
+        f"promoted={result.promoted} skipped={result.skipped} auto_scan={auto_scan}",
+        actor=actor,
+    )
+    return result

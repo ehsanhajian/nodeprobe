@@ -366,6 +366,31 @@
     /* ── Runs table ── */
     .runs-table td, .runs-table th { font-size: 0.82rem; }
 
+    /* ── Flash / batch ── */
+    .flash-banner {
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 1rem;
+      font-size: 0.88rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .flash-banner.ok { border-color: #14532d; background: rgba(34,197,94,0.08); color: #86efac; }
+    .batch-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      padding: 0.65rem 0.75rem;
+      margin-bottom: 0.75rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .batch-bar .selected-count { font-size: 0.85rem; color: var(--text-secondary); margin-right: auto; }
+    .checkbox-col { width: 2.25rem; text-align: center; }
+    input[type="checkbox"] { width: auto; margin: 0; accent-color: var(--accent); cursor: pointer; }
+
     /* ── Detail page ── */
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.5rem; margin-bottom: 0.5rem; }
     .detail-label { font-size: 0.78rem; color: var(--muted); font-weight: 500; }

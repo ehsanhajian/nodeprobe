@@ -9,7 +9,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from dapptility_app.auth import verify_admin
 from dapptility_app.database import DiscoveredLead, DiscoveryRun, Endpoint, Finding, Project, Report, Scan, get_db
-from dapptility_app.services.discovery.sync import dismiss_lead, promote_lead, run_discovery_sync
+from dapptility_app.services.discovery.sync import (
+    batch_dismiss_leads,
+    batch_promote_leads,
+    dismiss_lead,
+    promote_lead,
+    run_discovery_sync,
+)
 from dapptility_app.services.outreach import generate_outreach_email
 from dapptility_app.services import store
 
@@ -176,12 +182,48 @@ def scan_detail(request: Request, scan_id: int, db: Session = Depends(get_db)):
     if not scan:
         raise HTTPException(404)
     raw_available = store.load_raw_scan(scan) is not None
-    email_draft = generate_outreach_email(db, scan.endpoint.project, scan)
+    outreach_report = (
+        db.query(Report)
+        .filter(Report.scan_id == scan.id, Report.status == "published")
+        .order_by(Report.created_at.desc())
+        .first()
+    )
+    email_draft = generate_outreach_email(
+        db,
+        scan.endpoint.project,
+        scan,
+        report=outreach_report,
+    )
     return templates.TemplateResponse(
         request,
         "admin/scan_detail.html",
-        {"scan": scan, "raw_available": raw_available, "email_draft": email_draft},
+        {
+            "scan": scan,
+            "raw_available": raw_available,
+            "email_draft": email_draft,
+            "outreach_report": outreach_report,
+            "report_published": request.query_params.get("report_published") == "1",
+        },
     )
+
+
+@router.post("/scans/{scan_id}/outreach-report")
+def scan_publish_outreach_report(scan_id: int, db: Session = Depends(get_db)):
+    scan = (
+        db.query(Scan)
+        .options(
+            joinedload(Scan.endpoint).joinedload(Endpoint.project),
+            joinedload(Scan.findings),
+        )
+        .filter(Scan.id == scan_id)
+        .first()
+    )
+    if not scan:
+        raise HTTPException(404)
+    report = store.ensure_published_outreach_report(db, scan.endpoint.project, scan)
+    if report is None:
+        raise HTTPException(400, "No actionable findings to publish in a report")
+    return RedirectResponse(f"/admin/scans/{scan_id}?report_published=1", status_code=303)
 
 
 @router.get("/scans/{scan_id}/raw")
@@ -295,6 +337,9 @@ def discovery_list(
     db: Session = Depends(get_db),
     status: str = "new",
     page: int = 1,
+    promoted: int | None = None,
+    dismissed: int | None = None,
+    skipped: int | None = None,
 ):
     page = max(1, page)
     base_query = db.query(DiscoveredLead).filter(
@@ -339,7 +384,45 @@ def discovery_list(
             "total_pages": total_pages,
             "page_size": DISCOVERY_PAGE_SIZE,
             "status_counts": status_counts,
+            "flash": {
+                "promoted": promoted,
+                "dismissed": dismissed,
+                "skipped": skipped,
+            },
         },
+    )
+
+
+@router.post("/discovery/batch")
+def discovery_batch(
+    action: str = Form(...),
+    lead_ids: list[int] = Form(default=[]),
+    status: str = Form("new"),
+    page: int = Form(1),
+    auto_scan: str = Form("false"),
+    db: Session = Depends(get_db),
+):
+    if not lead_ids:
+        return RedirectResponse(f"/admin/discovery?status={status}&page={page}&skipped=0", status_code=303)
+
+    if action == "dismiss":
+        result = batch_dismiss_leads(db, lead_ids, actor="admin")
+    elif action == "promote":
+        result = batch_promote_leads(
+            db,
+            lead_ids,
+            actor="admin",
+            auto_scan=auto_scan.lower() in {"1", "true", "yes", "on"},
+        )
+    else:
+        raise HTTPException(400, "Unknown batch action")
+
+    return RedirectResponse(
+        (
+            f"/admin/discovery?status={status}&page={page}"
+            f"&promoted={result.promoted}&dismissed={result.dismissed}&skipped={result.skipped}"
+        ),
+        status_code=303,
     )
 
 

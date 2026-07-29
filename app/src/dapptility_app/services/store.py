@@ -198,6 +198,15 @@ def publishable_findings(scan: Scan, profile: str) -> list[Finding]:
     return [f for f in findings if f.status in {"open", "confirmed"}]
 
 
+def outreach_report_findings(scan: Scan) -> list[Finding]:
+    """Preliminary outreach reports include open and confirmed findings."""
+    return [
+        f
+        for f in scan.findings
+        if f.kind != "expected_surface" and f.status in {"open", "confirmed"}
+    ]
+
+
 def create_report_draft(
     db: Session,
     project: Project,
@@ -221,11 +230,17 @@ def create_report_draft(
     return report
 
 
-def build_and_store_report(db: Session, report: Report) -> Report:
+def build_and_store_report(
+    db: Session,
+    report: Report,
+    *,
+    findings: list[Finding] | None = None,
+) -> Report:
     project = report.project
     scan = report.scan
     endpoint = scan.endpoint
-    findings = publishable_findings(scan, scan.profile)
+    if findings is None:
+        findings = publishable_findings(scan, scan.profile)
 
     html = render_report_html(
         project=project,
@@ -276,6 +291,46 @@ def revoke_report(db: Session, report: Report) -> Report:
     db.commit()
     db.refresh(report)
     log_action(db, "report.revoke", f"report_id={report.id}")
+    return report
+
+
+def ensure_published_outreach_report(
+    db: Session,
+    project: Project,
+    scan: Scan,
+) -> Report | None:
+    """Build and publish a preliminary report for outreach, if findings exist."""
+    findings = outreach_report_findings(scan)
+    if not findings:
+        return None
+
+    report = (
+        db.query(Report)
+        .filter(Report.scan_id == scan.id, Report.status == "published")
+        .order_by(Report.created_at.desc())
+        .first()
+    )
+    if report:
+        return report
+
+    report = (
+        db.query(Report)
+        .filter(Report.scan_id == scan.id)
+        .order_by(Report.created_at.desc())
+        .first()
+    )
+    if report is None:
+        report = create_report_draft(
+            db,
+            project,
+            scan,
+            title=f"Preliminary RPC Security Assessment — {project.name}",
+            report_type="preliminary",
+        )
+
+    build_and_store_report(db, report, findings=findings)
+    if report.status != "published":
+        publish_report(db, report)
     return report
 
 

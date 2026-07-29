@@ -81,6 +81,14 @@
     {% endfor %}
   </nav>
 
+  {% if flash.promoted or flash.dismissed %}
+  <div class="flash-banner ok">
+    {% if flash.promoted %}<strong>{{ flash.promoted }}</strong> promoted. {% endif %}
+    {% if flash.dismissed %}<strong>{{ flash.dismissed }}</strong> dismissed. {% endif %}
+    {% if flash.skipped %}<strong>{{ flash.skipped }}</strong> skipped.{% endif %}
+  </div>
+  {% endif %}
+
   <div class="table-meta">
     <span class="muted text-sm">
       {% if total == 0 %}
@@ -92,9 +100,32 @@
     <span class="muted text-sm">Page {{ page }} / {{ total_pages }}</span>
   </div>
 
+  <form method="post" action="/admin/discovery/batch" id="discovery-batch-form">
+    <input type="hidden" name="status" value="{{ status }}">
+    <input type="hidden" name="page" value="{{ page }}">
+
+    {% if status == 'new' and leads %}
+    <div class="batch-bar">
+      <span class="selected-count"><span id="selected-count">0</span> selected</span>
+      <button class="btn btn-primary btn-sm" type="submit" name="action" value="promote" disabled id="btn-promote">
+        Promote selected
+      </button>
+      <button class="btn btn-secondary btn-sm" type="submit" name="action" value="dismiss" disabled id="btn-dismiss">
+        Dismiss selected
+      </button>
+      <label class="text-sm muted" style="display:flex;align-items:center;gap:0.35rem;margin:0;">
+        <input type="checkbox" name="auto_scan" value="true" style="width:auto;margin:0;">
+        Scan after promote
+      </label>
+    </div>
+    {% endif %}
+
   <table>
     <thead>
       <tr>
+        {% if status == 'new' and leads %}
+        <th class="checkbox-col"><input type="checkbox" id="select-all" title="Select all on this page"></th>
+        {% endif %}
         <th style="width:4rem;">Score</th>
         <th>Network</th>
         <th>RPC endpoint</th>
@@ -107,6 +138,13 @@
     {% for lead in leads %}
     {% set tier = lead.lead_score|score_tier %}
     <tr>
+      {% if status == 'new' %}
+      <td class="checkbox-col">
+        {% if not lead.is_third_party_provider %}
+        <input type="checkbox" name="lead_ids" value="{{ lead.id }}" class="lead-checkbox">
+        {% endif %}
+      </td>
+      {% endif %}
       <td>
         <div class="score-badge {{ tier }}" title="Outreach priority score 0–100">
           <span class="value">{{ lead.lead_score }}</span>
@@ -168,7 +206,7 @@
     </tr>
     {% else %}
     <tr>
-      <td colspan="6" style="padding:2.5rem;text-align:center;" class="muted">
+      <td colspan="{% if status == 'new' and leads %}7{% else %}6{% endif %}" style="padding:2.5rem;text-align:center;" class="muted">
         {% if status == 'new' %}No new leads. Click <strong>Sync now</strong> to import from ChainList.
         {% else %}No leads in this view.{% endif %}
       </td>
@@ -176,6 +214,7 @@
     {% endfor %}
     </tbody>
   </table>
+  </form>
 
   {% if total_pages > 1 %}
   <nav class="pagination" aria-label="Pagination">
@@ -237,4 +276,31 @@
 </details>
 
 </div>
+<script>
+(function() {
+  var selectAll = document.getElementById('select-all');
+  var checkboxes = document.querySelectorAll('.lead-checkbox');
+  var countEl = document.getElementById('selected-count');
+  var btnPromote = document.getElementById('btn-promote');
+  var btnDismiss = document.getElementById('btn-dismiss');
+  if (!selectAll || !checkboxes.length) return;
+
+  function updateBatchBar() {
+    var checked = document.querySelectorAll('.lead-checkbox:checked').length;
+    if (countEl) countEl.textContent = checked;
+    if (btnPromote) btnPromote.disabled = checked === 0;
+    if (btnDismiss) btnDismiss.disabled = checked === 0;
+    selectAll.indeterminate = checked > 0 && checked < checkboxes.length;
+    selectAll.checked = checked === checkboxes.length && checkboxes.length > 0;
+  }
+
+  selectAll.addEventListener('change', function() {
+    checkboxes.forEach(function(cb) { cb.checked = selectAll.checked; });
+    updateBatchBar();
+  });
+  checkboxes.forEach(function(cb) {
+    cb.addEventListener('change', updateBatchBar);
+  });
+})();
+</script>
 {% endblock %}

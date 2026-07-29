@@ -137,16 +137,34 @@
 </div>
 
 <div class="card">
-  <h2>Create report</h2>
-  <form method="post" action="/admin/scans/{{ scan.id }}/report">
-    <label>Report title</label>
-    <input name="title" value="Preliminary RPC Security Assessment — {{ scan.endpoint.project.name }}" required style="max-width:560px;">
-    <input type="hidden" name="report_type" value="preliminary">
-    <button class="btn btn-primary" type="submit" style="margin-top:0.25rem;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      Build draft report
+  <h2>Report & outreach</h2>
+  {% if report_published %}
+  <div class="flash-banner ok" style="margin-bottom:0.75rem;">Report published — private link is now included in the email draft below.</div>
+  {% endif %}
+  {% if outreach_report %}
+  <p class="text-sm" style="margin-bottom:0.75rem;">
+    <strong>Published report:</strong>
+    <a href="/r/{{ outreach_report.token }}" target="_blank" class="font-mono">/r/{{ outreach_report.token }}</a>
+    · <a href="/admin/reports/{{ outreach_report.id }}">Manage</a>
+  </p>
+  {% else %}
+  <p class="muted text-sm" style="margin-bottom:0.75rem;">Publish a preliminary report to attach a private link to your outreach email.</p>
+  <form method="post" action="/admin/scans/{{ scan.id }}/outreach-report" style="margin-bottom:0.75rem;">
+    <button class="btn btn-primary btn-sm" type="submit">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      Publish outreach report
     </button>
   </form>
+  {% endif %}
+  <details class="text-sm">
+    <summary style="cursor:pointer;color:var(--muted);">Advanced: custom report title</summary>
+    <form method="post" action="/admin/scans/{{ scan.id }}/report" style="margin-top:0.75rem;">
+      <label>Report title</label>
+      <input name="title" value="Preliminary RPC Security Assessment — {{ scan.endpoint.project.name }}" required style="max-width:560px;">
+      <input type="hidden" name="report_type" value="preliminary">
+      <button class="btn btn-secondary btn-sm" type="submit" style="margin-top:0.25rem;">Build draft only</button>
+    </form>
+  </details>
 </div>
 
 {% if email_draft %}
@@ -172,6 +190,7 @@
   <div class="muted text-xs" style="margin-top:0.5rem;">
     {{ email_draft.finding_count }} finding(s) included
     {% if email_draft.has_critical %} · <span style="color:#fca5a5;">contains critical/high severity</span>{% endif %}
+    {% if email_draft.report_url %} · <a href="{{ email_draft.report_url }}" target="_blank">Report link included</a>{% endif %}
   </div>
 </div>
 <script>
@@ -196,3 +215,4 @@ function copyEmail() {
   </div>
 </div>
 {% endif %}
+{% endblock %}
