@@ -1,21 +1,17 @@
 # GitHub setup
 
-Follow these steps to connect this repository to GitHub.
+Repository is connected and active.
 
-## 1. Add SSH key to GitHub
+| Item | Value |
+|---|---|
+| URL | https://github.com/ehsanhajian/dapptility |
+| Remote | `git@github.com:ehsanhajian/dapptility.git` (SSH) |
+| Default branch | `main` |
+| Issues | https://github.com/ehsanhajian/dapptility/issues |
 
-A deploy key pair was generated on this machine (if not already present):
+## SSH authentication
 
-```bash
-cat ~/.ssh/id_ed25519_github.pub
-```
-
-1. Open [GitHub → Settings → SSH and GPG keys](https://github.com/settings/keys)
-2. Click **New SSH key**
-3. Paste the public key
-4. Save
-
-Verify:
+Verify access:
 
 ```bash
 ssh -T git@github.com
@@ -23,48 +19,62 @@ ssh -T git@github.com
 
 Expected: `Hi <username>! You've successfully authenticated...`
 
-## 2. Configure git identity (once per machine)
+If push fails with HTTPS credential errors, ensure the remote uses SSH:
+
+```bash
+cd /home/ubuntu/dapptility
+git remote set-url origin git@github.com:ehsanhajian/dapptility.git
+git push origin main
+```
+
+## Git identity
+
+Configure once per machine if not already set:
 
 ```bash
 git config --global user.name "Your Name"
 git config --global user.email "you@example.com"
 ```
 
-## 3. Create the remote repository
-
-### Option A — GitHub CLI (recommended)
+## Push workflow
 
 ```bash
 cd /home/ubuntu/dapptility
-gh auth login
-gh repo create dapptility --private --source=. --remote=origin --push
+git add -A
+git commit -m "Your message"
+git push origin main
 ```
 
-Use `--public` instead of `--private` if you prefer an open repo.
-
-### Option B — GitHub website
-
-1. Create a new repository named `dapptility` at [github.com/new](https://github.com/new)
-2. Do **not** initialize with README (this repo already has one)
-3. Add remote and push:
+For feature branches:
 
 ```bash
-cd /home/ubuntu/dapptility
-git remote add origin git@github.com:<ORG_OR_USER>/dapptility.git
-git push -u origin main
+git checkout -b feature/my-change
+git push -u origin feature/my-change
+gh pr create
 ```
 
-## 4. Branch protection (after first push)
+## CI
+
+GitHub Actions runs scanner tests on push/PR to `main`:
+
+- Workflow: `.github/workflows/ci.yml`
+- Job: `Scanner tests` (`pytest -q` in `scanner/`)
+
+## Branch protection (recommended)
 
 On GitHub: **Settings → Branches → Add rule** for `main`:
 
 - Require a pull request before merging
-- Require status checks to pass (`CI / Repository checks`)
+- Require status checks to pass (`Scanner tests`)
 
-## 5. Optional — GitHub secrets (later)
+## Secrets (later)
 
-When CI needs credentials:
+When CI or deployment needs credentials:
 
 - `Settings → Secrets and variables → Actions`
 
 Do not commit secrets. Use `.env.example` for local development placeholders only.
+
+## Development
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for scanner setup, architecture, and milestone status.

@@ -7,13 +7,26 @@ on:
     branches: [main, master]
 
 jobs:
-  placeholder:
-    name: Repository checks
+  scanner:
+    name: Scanner tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify repository structure
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install scanner
+        working-directory: scanner
+        run: pip install -e ".[dev]"
+
+      - name: Run tests
+        working-directory: scanner
+        run: pytest -q
+
+      - name: Verify CLI
+        working-directory: scanner
         run: |
-          test -f README.md
-          test -f docs/FEATURE_LIST.md
-          echo "CI placeholder — add scanner and app test jobs as code lands."
+          dapptility-scan profiles
+          dapptility-scan rules | python3 -c "import json,sys; assert len(json.load(sys.stdin)) >= 10"

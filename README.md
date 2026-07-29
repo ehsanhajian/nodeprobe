@@ -24,7 +24,7 @@ scanner/        EVM RPC scan engine (Milestone 1)
 
 See [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md) for the full product scope. Current build order:
 
-1. Scanner CLI with `Free` and `Outbound` profiles
+1. Scanner CLI with `Free` and `Outbound` profiles — **done** (see [scanner/README.md](scanner/README.md))
 2. Reports and admin panel
 3. Public self-service (landing, accounts, free scan)
 4. DNS verification and USDC payment
@@ -32,7 +32,19 @@ See [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md) for the full product scope. Cur
 
 ## Development
 
-Project scaffolding is in progress. Scanner CLI and application code will land under `scanner/` and `app/` as milestones are implemented.
+### Scanner (Milestone 1)
+
+```bash
+cd scanner
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+dapptility-scan scan https://rpc.example.com --pretty
+pytest -q
+```
+
+See [scanner/README.md](scanner/README.md) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+Application and admin code will land under `app/` in later milestones.
 
 ## Policies
 
