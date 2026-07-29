@@ -10,11 +10,21 @@ Three scanners, one workspace:
 
 | Module | What it assesses |
 |---|---|
-| **Web** | External HTTP/TLS posture of project sites (headers, TLS, security.txt, …) |
-| **RPC** | Public EVM JSON-RPC endpoints from an external attacker’s view |
-| **Smart contract** | On-chain contract surface via read-only RPC (code, proxies, ABI/Sourcify, heuristics) |
+| **Web** | External HTTP/TLS posture (headers, certificate, security.txt, robots.txt, …) |
+| **RPC** | Public EVM JSON-RPC from an external attacker’s view (namespaces, TLS, client fingerprint, …) |
+| **Smart contract** | Read-only on-chain surface (code, proxies, bytecode heuristics, Sourcify/ABI hints) |
 
-Safety defaults stay on: SSRF protections, request budgets, kill switch, clear report scope.
+Projects hold website, RPC, and contract targets. Findings can be reviewed together and exported as a multi-module HTML/PDF report.
+
+**Profiles:** `Quick` · `Standard` · `Deep` (aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep)
+
+**Safety:** SSRF / private-IP blocking, per-profile request budgets, kill switch, clear report scope (what was / was not done).
+
+## Status
+
+Personal-tool MVP is complete: all three scanners, console targets, unified findings/reports, and Deep RPC enrichment.
+
+Optional: ChainList RPC inventory sync (off by default — set `DAPPILITY_DISCOVERY_ENABLED=true`).
 
 ## Repository layout
 
@@ -22,30 +32,29 @@ Safety defaults stay on: SSRF protections, request budgets, kill switch, clear r
 docs/           Scope and development docs
 scanner/        Scan engines + CLI
 app/            Personal console, persistence, reports
+deploy/         Caddy config for Docker
 ```
 
-## Scope
+## Quick start
 
-See [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md). Build order:
-
-1. RPC scanner CLI — **done**
-2. Console, projects, reports — **done** (RPC-focused today)
-3. Reposition as personal multi-scanner (docs + target model)
-4. Web scanner module
-5. Smart contract scanner module
-6. Unified project findings and reports
-
-## Development
-
-### Scanner
+### Scanner CLI
 
 ```bash
 cd scanner
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-dapptility-scan scan https://rpc.example.com --pretty
+
+dapptility-scan profiles
+dapptility-scan rules --module all
+
+dapptility-scan scan https://rpc.example.com --profile Standard --pretty
+dapptility-scan web https://example.com --pretty
+dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1 --pretty
+
 pytest -q
 ```
+
+Exit code `2` means the scan was blocked/aborted (unsafe target, kill switch, provider block with `--block-providers`, etc.).
 
 See [scanner/README.md](scanner/README.md).
 
@@ -59,6 +68,10 @@ dapptility-admin
 
 Open http://localhost:8000/admin (`admin` / your password).
 
+- Projects → add **web** / **rpc** / **contract** targets → run scans
+- Project findings (filter by module / severity)
+- **Build project report** for a combined assessment
+
 See [app/README.md](app/README.md) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ### Production (Docker + Caddy)
@@ -69,6 +82,14 @@ docker compose up -d --build
 ```
 
 See [docs/DOCKER.md](docs/DOCKER.md).
+
+## Docs
+
+| Doc | Purpose |
+|---|---|
+| [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md) | Product scope (personal tool) |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Architecture and setup |
+| [docs/DOCKER.md](docs/DOCKER.md) | Production deploy |
 
 ## License
 
