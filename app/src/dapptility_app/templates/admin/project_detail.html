@@ -28,15 +28,16 @@
       <td>{% if ep.is_third_party_provider %}<span class="badge warn">{{ ep.provider_name }}</span>{% else %}<span class="badge ok">Own domain</span>{% endif %}</td>
       <td>
         {% if not ep.is_third_party_provider %}
-        <form method="post" action="/admin/endpoints/{{ ep.id }}/scan" class="form-inline">
+        <form method="post" action="/admin/endpoints/{{ ep.id }}/scan" class="form-inline" onsubmit="handleScanSubmit(this)">
           <select name="profile" style="width:auto;min-width:8rem;">
             <option value="Outbound">Outbound</option>
             <option value="Free">Free</option>
             <option value="Authorized-Full">Authorized-Full</option>
           </select>
-          <button class="btn btn-primary btn-sm" type="submit">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Run scan
+          <button class="btn btn-primary btn-sm scan-btn" type="submit">
+            <svg class="scan-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg class="scan-spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none;animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="50" stroke-dashoffset="10"/></svg>
+            <span class="scan-label">Run scan</span>
           </button>
         </form>
         {% else %}
@@ -83,4 +84,16 @@
     <button class="btn btn-ghost btn-sm" type="submit" style="color:var(--danger);">Archive project</button>
   </form>
 </div>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+<script>
+function handleScanSubmit(form) {
+  var btn = form.querySelector('.scan-btn');
+  btn.disabled = true;
+  btn.style.opacity = '0.7';
+  btn.querySelector('.scan-icon').style.display = 'none';
+  btn.querySelector('.scan-spinner').style.display = '';
+  btn.querySelector('.scan-label').textContent = 'Scanning…';
+  form.querySelector('select').disabled = true;
+}
+</script>
 {% endblock %}

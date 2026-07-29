@@ -13,6 +13,54 @@
   <a class="btn btn-ghost btn-sm" href="/admin/projects/{{ scan.endpoint.project.id }}">← Back to project</a>
 </div>
 
+{% if scan.status == 'aborted' %}
+<div class="card" style="border-color:#7f1d1d;margin-bottom:1rem;">
+  <div style="display:flex;align-items:flex-start;gap:0.65rem;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+    <div>
+      <strong style="color:#fca5a5;">Scan aborted</strong>
+      <p class="muted text-sm" style="margin-top:0.2rem;">
+        {% if scan.abort_reason %}{{ scan.abort_reason }}{% else %}The scan could not complete. The RPC endpoint may be unreachable, refusing connections, or returning unexpected responses.{% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+{% elif scan.status == 'completed' and scan.requests_made == 0 %}
+<div class="card" style="border-color:#854d0e;margin-bottom:1rem;">
+  <div style="display:flex;align-items:flex-start;gap:0.65rem;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fde68a" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div>
+      <strong style="color:#fde68a;">No data collected</strong>
+      <p class="muted text-sm" style="margin-top:0.2rem;">The scan completed but made zero requests. The endpoint may be unreachable or rejected the connection before any checks could run.</p>
+    </div>
+  </div>
+</div>
+{% elif scan.status == 'completed' %}
+<div class="card" style="border-color:#14532d;margin-bottom:1rem;">
+  <div style="display:flex;align-items:flex-start;gap:0.65rem;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#86efac" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <div>
+      <strong style="color:#86efac;">Scan completed</strong>
+      <p class="muted text-sm" style="margin-top:0.2rem;">
+        {{ scan.requests_made }} request{{ 's' if scan.requests_made != 1 else '' }} made
+        {% if scan.finished_at %} · finished {{ scan.finished_at.strftime('%Y-%m-%d %H:%M UTC') }}{% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+{% elif scan.status == 'running' %}
+<div class="card" style="border-color:#1e3a5f;margin-bottom:1rem;">
+  <div style="display:flex;align-items:flex-start;gap:0.65rem;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;animation:spin 1.5s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="50" stroke-dashoffset="10"/></svg>
+    <div>
+      <strong style="color:#93c5fd;">Scan in progress</strong>
+      <p class="muted text-sm" style="margin-top:0.2rem;">The scanner is probing the endpoint. This page will show results once complete.</p>
+    </div>
+  </div>
+</div>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+{% endif %}
+
 <div class="grid" style="margin-bottom:1.25rem;">
   <div class="card" style="margin:0;">
     <div class="muted text-xs" style="text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Security score</div>
