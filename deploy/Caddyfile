@@ -2,7 +2,7 @@
 	email {$ACME_EMAIL}
 }
 
-{$DAPPILITY_DOMAIN} {
+{$DAPPILITY_DOMAIN}, www.{$DAPPILITY_DOMAIN} {
 	encode gzip zstd
 
 	header {
