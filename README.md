@@ -18,14 +18,15 @@ Two acquisition paths:
 ```
 docs/           Product and planning documents
 scanner/        EVM RPC scan engine (Milestone 1)
+app/            Admin panel, reports, and persistence (Milestone 2)
 ```
 
 ## MVP focus
 
 See [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md) for the full product scope. Current build order:
 
-1. Scanner CLI with `Free` and `Outbound` profiles — **done** (see [scanner/README.md](scanner/README.md))
-2. Reports and admin panel
+1. Scanner CLI with `Free` and `Outbound` profiles — **done**
+2. Reports and admin panel — **done** (see [app/README.md](app/README.md))
 3. Public self-service (landing, accounts, free scan)
 4. DNS verification and USDC payment
 5. First sales
@@ -42,9 +43,21 @@ dapptility-scan scan https://rpc.example.com --pretty
 pytest -q
 ```
 
-See [scanner/README.md](scanner/README.md) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+See [scanner/README.md](scanner/README.md).
 
-Application and admin code will land under `app/` in later milestones.
+### Admin app (Milestone 2)
+
+```bash
+pip install -e "./scanner[dev]" -e "./app[dev]"
+export DAPPILITY_ADMIN_PASSWORD=your-secure-password
+dapptility-admin
+```
+
+Open http://localhost:8000/admin (`admin` / your password).
+
+See [app/README.md](app/README.md) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
+Public self-service and payments land in later milestones.
 
 ## Policies
 

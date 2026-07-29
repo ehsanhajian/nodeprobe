@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% block title %}Projects — Dapptility{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;">
+  <h1>Projects</h1>
+  <a class="btn" href="/admin/projects/new">New project</a>
+</div>
+<div class="card">
+  <table>
+    <tr><th>Name</th><th>Website</th><th>Lead score</th><th>Created</th></tr>
+    {% for project in projects %}
+    <tr>
+      <td><a href="/admin/projects/{{ project.id }}">{{ project.name }}</a></td>
+      <td>{{ project.website or '—' }}</td>
+      <td>{{ project.lead_score }}</td>
+      <td class="muted">{{ project.created_at.strftime('%Y-%m-%d') }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="muted">No projects yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

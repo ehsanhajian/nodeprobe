@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ report.title }}</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; color: #111; line-height: 1.5; }
+    h1, h2 { font-family: system-ui, sans-serif; }
+    .meta { color: #555; font-size: 0.95rem; }
+    .score { font-size: 2rem; font-weight: bold; }
+    .scope { background: #f4f6f8; padding: 1rem; border-radius: 8px; margin: 1rem 0; }
+    .finding { border-left: 4px solid #ccc; padding: 0.5rem 1rem; margin: 1rem 0; }
+    .finding.critical { border-color: #b91c1c; }
+    .finding.high { border-color: #c2410c; }
+    .finding.medium { border-color: #a16207; }
+    .finding.low { border-color: #1d4ed8; }
+    .badge { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    footer { margin-top: 2rem; color: #666; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <h1>{{ report.title }}</h1>
+  <p class="meta">
+    {{ project.name }} · {{ endpoint.url }}<br>
+    Scan profile: {{ scan.profile }} · Generated {{ generated_at }}
+  </p>
+  <p class="score">Security score: {{ scan.score }}/100</p>
+  <p class="meta">Chain: {{ scan.network_name or 'unknown' }} ({{ scan.chain_id }})</p>
+
+  <div class="scope">
+    <h2>What we did</h2>
+    <ul>{% for item in scope_did %}<li>{{ item }}</li>{% endfor %}</ul>
+    <h2>What we did not do</h2>
+    <ul>{% for item in scope_did_not %}<li>{{ item }}</li>{% endfor %}</ul>
+  </div>
+
+  <h2>Summary</h2>
+  <p>
+    Critical: {{ severity_counts.Critical }} ·
+    High: {{ severity_counts.High }} ·
+    Medium: {{ severity_counts.Medium }} ·
+    Low: {{ severity_counts.Low }} ·
+    Info: {{ severity_counts.Info }}
+  </p>
+
+  <h2>Findings</h2>
+  {% for f in findings %}
+  <div class="finding {{ f.severity|lower }}">
+    <div class="badge">{{ f.severity }} · {{ f.confidence }}</div>
+    <h3>{{ f.title }} <span class="meta">({{ f.rule_id }})</span></h3>
+    <p>{{ f.description }}</p>
+    {% if f.remediation %}<p><strong>Remediation:</strong> {{ f.remediation }}</p>{% endif %}
+  </div>
+  {% else %}
+  <p>No publishable findings for this report.</p>
+  {% endfor %}
+
+  <footer>
+    Dapptility · Confidential assessment · {{ report_url }}
+  </footer>
+</body>
+</html>

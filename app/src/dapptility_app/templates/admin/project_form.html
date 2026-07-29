@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% block title %}New project — Dapptility{% endblock %}
+{% block content %}
+<h1>New project</h1>
+<div class="card">
+  <form method="post">
+    <label>Name</label>
+    <input name="name" required>
+    <label>Website</label>
+    <input name="website" placeholder="https://example.com">
+    <label>Network type</label>
+    <input name="network_type" placeholder="EVM L2">
+    <label>Project type</label>
+    <input name="project_type" placeholder="rollup">
+    <label>Launch stage</label>
+    <input name="launch_stage" placeholder="mainnet">
+    <label>Lead score</label>
+    <input name="lead_score" type="number" value="0">
+    <label>Disclosure contact</label>
+    <input name="disclosure_contact" placeholder="security@example.com">
+    <label>Communication notes</label>
+    <textarea name="communication_notes" rows="3"></textarea>
+    <button class="btn" type="submit">Create project</button>
+  </form>
+</div>
+{% endblock %}

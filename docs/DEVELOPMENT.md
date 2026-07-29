@@ -5,7 +5,7 @@
 | Milestone | Status | Location |
 |---|---|---|
 | M1 — Scanner CLI | **Complete** | `scanner/` |
-| M2 — Reports and Admin | Not started | `app/` (planned) |
+| M2 — Reports and Admin | **Complete** | `app/` |
 | M3 — Public Self-service | Not started | `app/` (planned) |
 | M4 — Verification and Payment | Not started | `app/` (planned) |
 | M5 — First Sales | Not started | — |
@@ -96,14 +96,54 @@ pytest -q
 
 CI runs the same test suite on push/PR to `main`.
 
-## Next up (M2)
+## Admin app (M2)
 
-- Persist projects, endpoints, scans, and findings
-- Admin panel to run scans and review outbound results
-- HTML/PDF reports with scope disclosure
-- Private report links and evidence retention defaults
+FastAPI admin panel with SQLite persistence, scan orchestration, finding review, and report delivery.
 
-See GitHub milestone [M2 — Reports and Admin](https://github.com/ehsanhajian/dapptility/milestone/2).
+### Install and run
+
+```bash
+pip install -e "./scanner[dev]" -e "./app[dev]"
+export DAPPILITY_ADMIN_PASSWORD=your-secure-password
+dapptility-admin
+```
+
+Admin UI: http://localhost:8000/admin (HTTP Basic `admin` / password)
+
+### Features
+
+- Project and HTTP endpoint CRUD with third-party provider flags
+- Scan execution (Free / Outbound / Authorized-Full) from admin
+- Outbound finding review: confirm, reject, false positive
+- HTML and PDF reports with What we did / did not do
+- Private report links at `/r/{token}`
+- Raw scan JSON retention (30 days, admin-only access)
+- Audit log for admin actions
+
+### App layout
+
+```
+app/src/dapptility_app/
+  main.py           FastAPI application
+  database.py       SQLAlchemy models
+  routes/           Admin and public report routes
+  services/         Scan orchestration, reports, persistence
+  templates/        Admin UI and report HTML
+```
+
+### Tests
+
+```bash
+cd app && pytest -q
+```
+
+## Next up (M3)
+
+- Public landing page and free scan flow
+- User accounts with magic-link auth
+- Abuse budgets and rate limiting
+
+See GitHub milestone [M3 — Public Self-service](https://github.com/ehsanhajian/dapptility/milestone/3).
 
 ## Git workflow
 

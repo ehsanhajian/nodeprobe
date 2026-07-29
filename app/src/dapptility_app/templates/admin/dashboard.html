@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard — Dapptility{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="grid">
+  <div class="card"><div class="muted">Projects</div><div class="stat">{{ stats.projects }}</div></div>
+  <div class="card"><div class="muted">Scans</div><div class="stat">{{ stats.scans }}</div></div>
+  <div class="card"><div class="muted">Completed</div><div class="stat">{{ stats.completed_scans }}</div></div>
+  <div class="card"><div class="muted">Reports</div><div class="stat">{{ stats.reports }}</div></div>
+</div>
+<div class="card">
+  <h2>Recent scans</h2>
+  <table>
+    <tr><th>ID</th><th>Project</th><th>Profile</th><th>Status</th><th>Score</th></tr>
+    {% for scan in recent_scans %}
+    <tr>
+      <td><a href="/admin/scans/{{ scan.id }}">#{{ scan.id }}</a></td>
+      <td>{{ scan.endpoint.project.name }}</td>
+      <td>{{ scan.profile }}</td>
+      <td>{{ scan.status }}</td>
+      <td>{{ scan.score if scan.score is not none else '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">No scans yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

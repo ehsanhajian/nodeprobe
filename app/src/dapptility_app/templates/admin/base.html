@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dapptility Admin{% endblock %}</title>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --text:#e7ecf3; --muted:#8b9cb3; --accent:#3b82f6; --danger:#ef4444; --ok:#22c55e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--text); }
+    a { color: var(--accent); text-decoration: none; }
+    header { padding: 1rem 1.5rem; border-bottom: 1px solid #243044; display:flex; gap:1.5rem; align-items:center; }
+    header a { color: var(--muted); }
+    header a:hover, header strong { color: var(--text); }
+    main { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+    .card { background: var(--card); border: 1px solid #243044; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { text-align:left; padding:0.6rem 0.5rem; border-bottom:1px solid #243044; vertical-align: top; }
+    .muted { color: var(--muted); font-size: 0.9rem; }
+    .badge { display:inline-block; padding:0.15rem 0.5rem; border-radius:999px; font-size:0.75rem; background:#243044; }
+    .badge.critical { background:#7f1d1d; }
+    .badge.high { background:#9a3412; }
+    .badge.medium { background:#854d0e; }
+    .badge.low { background:#1e3a5f; }
+    .btn { display:inline-block; background:var(--accent); color:white; border:none; padding:0.45rem 0.8rem; border-radius:6px; cursor:pointer; font-size:0.9rem; }
+    .btn.secondary { background:#243044; }
+    .btn.danger { background:var(--danger); }
+    input, select, textarea { width:100%; padding:0.5rem; border-radius:6px; border:1px solid #243044; background:#0f1419; color:var(--text); margin-bottom:0.75rem; }
+    label { display:block; margin-bottom:0.25rem; color:var(--muted); font-size:0.85rem; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem; }
+    .stat { font-size:1.75rem; font-weight:700; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Dapptility</strong>
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/projects">Projects</a>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

@@ -1,0 +1,57 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ project.name }} — Dapptility{% endblock %}
+{% block content %}
+<h1>{{ project.name }}</h1>
+<p class="muted">{{ project.website or 'No website' }} · Lead score {{ project.lead_score }}</p>
+<div class="card">
+  <h2>Endpoints</h2>
+  <table>
+    <tr><th>URL</th><th>Provider</th><th>Actions</th></tr>
+    {% for ep in endpoints %}
+    <tr>
+      <td>{{ ep.url }}</td>
+      <td>{% if ep.is_third_party_provider %}<span class="badge">{{ ep.provider_name }}</span>{% else %}—{% endif %}</td>
+      <td>
+        {% if not ep.is_third_party_provider %}
+        <form method="post" action="/admin/endpoints/{{ ep.id }}/scan" style="display:inline;">
+          <select name="profile" style="width:auto;display:inline-block;margin:0;">
+            <option value="Outbound">Outbound</option>
+            <option value="Free">Free</option>
+            <option value="Authorized-Full">Authorized-Full</option>
+          </select>
+          <button class="btn" type="submit">Run scan</button>
+        </form>
+        {% else %}
+        <span class="muted">Blocked (third-party)</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="muted">No endpoints.</td></tr>
+    {% endfor %}
+  </table>
+  <h3>Add endpoint</h3>
+  <form method="post" action="/admin/projects/{{ project.id }}/endpoints">
+    <input name="url" placeholder="https://rpc.example.com" required>
+    <button class="btn" type="submit">Add HTTP RPC endpoint</button>
+  </form>
+</div>
+<div class="card">
+  <h2>Reports</h2>
+  <table>
+    <tr><th>Title</th><th>Status</th><th>Link</th></tr>
+    {% for report in reports %}
+    <tr>
+      <td><a href="/admin/reports/{{ report.id }}">{{ report.title }}</a></td>
+      <td>{{ report.status }}</td>
+      <td>{% if report.status == 'published' %}<a href="/r/{{ report.token }}">/r/{{ report.token[:12] }}…</a>{% else %}—{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="muted">No reports yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+<form method="post" action="/admin/projects/{{ project.id }}/archive">
+  <button class="btn danger" type="submit">Archive project</button>
+</form>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ report.title }} — Dapptility{% endblock %}
+{% block content %}
+<h1>{{ report.title }}</h1>
+<p class="muted">{{ report.report_type }} · {{ report.status }}</p>
+<div class="card">
+  <p><strong>Project:</strong> {{ report.project.name }}</p>
+  <p><strong>Endpoint:</strong> {{ report.scan.endpoint.url }}</p>
+  <p><strong>Scan profile:</strong> {{ report.scan.profile }}</p>
+  {% if report.status == 'published' %}
+  <p><strong>Private link:</strong> <a href="/r/{{ report.token }}">/r/{{ report.token }}</a></p>
+  {% endif %}
+  {% if report.html_path %}
+  <p>{% if report.status == 'published' %}<a href="/r/{{ report.token }}" target="_blank">Preview HTML</a>{% else %}<a href="/admin/reports/{{ report.id }}/preview" target="_blank">Preview draft HTML</a>{% endif %}
+  {% if report.pdf_path %} · <a href="/admin/reports/{{ report.id }}/pdf">Download PDF</a>{% endif %}</p>
+  {% endif %}
+</div>
+{% if report.status == 'draft' %}
+<form method="post" action="/admin/reports/{{ report.id }}/publish">
+  <button class="btn" type="submit">Publish report</button>
+</form>
+{% elif report.status == 'published' %}
+<form method="post" action="/admin/reports/{{ report.id }}/revoke">
+  <button class="btn danger" type="submit">Revoke report</button>
+</form>
+{% endif %}
+{% endblock %}

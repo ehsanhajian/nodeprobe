@@ -41,6 +41,5 @@ htmlcov/
 credentials.json
 secrets/
 
-# Scanner artifacts (local dev)
-scan-output/
-raw-responses/
+# Local data (SQLite, reports, raw evidence)
+data/
