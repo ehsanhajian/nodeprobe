@@ -34,11 +34,13 @@ Open http://localhost:8000/admin (HTTP Basic: `admin` / your password).
 - Third-party provider detection (optional skip)
 - Scan execution from console
 - Finding review (confirm / reject / false positive)
-- HTML and PDF reports with scope disclosure
+- Project findings view (filter by module / severity)
+- Project reports aggregating latest web + RPC + contract scans
+- HTML and PDF reports with per-module scope disclosure
 - Private report links (`/r/{token}`)
 - Raw evidence retention with admin-only access
 
-Planned: unified multi-module reports. See GitHub `personal-tool` issues.
+See GitHub `personal-tool` issues for remaining polish.
 
 ## Tests
 

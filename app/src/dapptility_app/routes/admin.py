@@ -111,7 +111,13 @@ def project_create(
 
 
 @router.get("/projects/{project_id}")
-def project_detail(request: Request, project_id: int, db: Session = Depends(get_db)):
+def project_detail(
+    request: Request,
+    project_id: int,
+    module: str = "",
+    severity: str = "",
+    db: Session = Depends(get_db),
+):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(404)
@@ -124,10 +130,26 @@ def project_detail(request: Request, project_id: int, db: Session = Depends(get_
         .order_by(Scan.created_at.desc())
         .all()
     )
+    findings = store.list_project_findings(
+        db,
+        project_id,
+        module=module or None,
+        severity=severity or None,
+    )
+    latest_modules = store.latest_completed_scans_by_module(db, project_id)
     return templates.TemplateResponse(
         request,
         "admin/project_detail.html",
-        {"project": project, "endpoints": endpoints, "reports": reports, "scans": scans},
+        {
+            "project": project,
+            "endpoints": endpoints,
+            "reports": reports,
+            "scans": scans,
+            "findings": findings,
+            "filter_module": module,
+            "filter_severity": severity,
+            "latest_modules": latest_modules,
+        },
     )
 
 
@@ -180,6 +202,18 @@ def project_archive(project_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404)
     store.update_project(db, project, archived=True)
     return RedirectResponse("/admin/projects", status_code=303)
+
+
+@router.post("/projects/{project_id}/report")
+def project_report_create(project_id: int, db: Session = Depends(get_db)):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(404)
+    try:
+        report = store.create_project_report(db, project, publish=False)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return RedirectResponse(f"/admin/reports/{report.id}", status_code=303)
 
 
 @router.post("/endpoints/{endpoint_id}/scan")
@@ -276,12 +310,15 @@ def finding_status(
     finding_id: int,
     status: str = Form(...),
     reviewer_note: str = Form(""),
+    return_to: str = Form(""),
     db: Session = Depends(get_db),
 ):
     finding = db.query(Finding).filter(Finding.id == finding_id).first()
     if not finding:
         raise HTTPException(404)
     store.update_finding_status(db, finding, status, reviewer_note or None)
+    if return_to.startswith("/admin/"):
+        return RedirectResponse(return_to, status_code=303)
     return RedirectResponse(f"/admin/scans/{finding.scan_id}", status_code=303)
 
 

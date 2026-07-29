@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -248,3 +249,62 @@ def test_multi_target_kinds(client, auth, mock_scan):
     c_scan = db.query(Scan).filter_by(id=c_scan_id).first()
     assert c_scan.module == "contract"
     db.close()
+
+
+def test_project_findings_and_unified_report(client, auth, mock_scan):
+    r = client.post(
+        "/admin/projects/new",
+        data={"name": "Unified"},
+        auth=auth,
+        follow_redirects=False,
+    )
+    project_id = int(r.headers["location"].split("/")[-1])
+
+    client.post(
+        f"/admin/projects/{project_id}/endpoints",
+        data={"kind": "web", "url": "https://web.unified.example"},
+        auth=auth,
+        follow_redirects=False,
+    )
+    client.post(
+        f"/admin/projects/{project_id}/endpoints",
+        data={"kind": "rpc", "url": "https://rpc.unified.example"},
+        auth=auth,
+        follow_redirects=False,
+    )
+
+    db = database.SessionLocal()
+    endpoints = db.query(Endpoint).filter_by(project_id=project_id).all()
+    web = next(ep for ep in endpoints if ep.kind == "web")
+    rpc = next(ep for ep in endpoints if ep.kind == "rpc")
+    db.close()
+
+    client.post(f"/admin/endpoints/{web.id}/scan", data={"profile": "Quick"}, auth=auth, follow_redirects=False)
+    client.post(f"/admin/endpoints/{rpc.id}/scan", data={"profile": "Quick"}, auth=auth, follow_redirects=False)
+
+    page = client.get(f"/admin/projects/{project_id}", auth=auth)
+    assert page.status_code == 200
+    assert "Findings" in page.text
+    assert "Build project report" in page.text
+    assert "Exposed admin" in page.text or "admin" in page.text.lower()
+
+    filtered = client.get(f"/admin/projects/{project_id}?module=web", auth=auth)
+    assert filtered.status_code == 200
+
+    r = client.post(
+        f"/admin/projects/{project_id}/report",
+        auth=auth,
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    report_id = int(r.headers["location"].split("/")[-1])
+
+    db = database.SessionLocal()
+    report = db.query(Report).filter_by(id=report_id).first()
+    assert report.report_type == "project"
+    assert report.html_path
+    html = Path(report.html_path).read_text()
+    db.close()
+    assert "Modules included" in html
+    assert "web" in html and "rpc" in html
+    assert "[web]" in html or "web" in html

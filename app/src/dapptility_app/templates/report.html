@@ -109,6 +109,15 @@
     }
     .scope ul { margin: 0 0 1rem; padding-left: 1.2rem; }
     .scope li { margin-bottom: 0.35rem; font-size: 0.92rem; }
+    .modules {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0 1.5rem;
+    }
+    .modules table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .modules th, .modules td { text-align: left; padding: 0.4rem 0.35rem; border-bottom: 1px solid var(--border); }
+    .modules th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
     .finding {
       border: 1px solid var(--border);
       border-left-width: 4px;
@@ -164,21 +173,27 @@
       <h1>{{ report.title }}</h1>
       <p class="meta">
         <strong>{{ project.name }}</strong><br>
-        Endpoint: <code>{{ endpoint.url }}</code><br>
-        Scan profile: {{ scan.profile }} · Generated {{ generated_at }}
+        {% if report.report_type == 'project' and module_summaries %}
+        Project report · {{ module_summaries|length }} module{{ 's' if module_summaries|length != 1 else '' }} · Generated {{ generated_at }}
+        {% else %}
+        Target: <code>{{ endpoint.label }}</code><br>
+        Module: {{ scan.module or endpoint.kind }} · Profile: {{ scan.profile }} · Generated {{ generated_at }}
+        {% endif %}
       </p>
     </header>
 
     <div class="summary-grid">
       <div class="summary-card">
-        <div class="summary-label">Security score</div>
-        <div class="summary-value score-value">{{ scan.score }}/100</div>
+        <div class="summary-label">{% if report.report_type == 'project' %}Overall score (min){% else %}Security score{% endif %}</div>
+        <div class="summary-value score-value">{{ overall_score if overall_score is not none else scan.score }}/100</div>
       </div>
+      {% if report.report_type != 'project' %}
       <div class="summary-card">
         <div class="summary-label">Network</div>
         <div class="summary-value" style="font-size:1rem;">{{ scan.network_name or 'Unknown' }}</div>
         <div class="meta">Chain ID {{ scan.chain_id or '—' }}</div>
       </div>
+      {% endif %}
       <div class="summary-card">
         <div class="summary-label">Findings</div>
         <div class="summary-value">{{ findings|length }}</div>
@@ -188,6 +203,27 @@
         <div class="summary-value" style="font-size:1rem;text-transform:capitalize;">{{ report.report_type }}</div>
       </div>
     </div>
+
+    {% if module_summaries %}
+    <div class="modules">
+      <h2 style="margin-top:0;">Modules included</h2>
+      <table>
+        <thead>
+          <tr><th>Module</th><th>Target</th><th>Profile</th><th>Score</th></tr>
+        </thead>
+        <tbody>
+        {% for m in module_summaries %}
+        <tr>
+          <td>{{ m.module }}</td>
+          <td><code>{{ m.label }}</code></td>
+          <td>{{ m.profile }}</td>
+          <td>{% if m.score is not none %}{{ m.score }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
 
     <div class="severity-bar">
       {% if severity_counts.Critical %}<span class="severity-pill critical">{{ severity_counts.Critical }} Critical</span>{% endif %}
@@ -208,7 +244,7 @@
       <h2>Findings</h2>
       {% for f in findings %}
       <article class="finding {{ f.severity|lower }}">
-        <div class="badge">{{ f.severity }} · {{ f.confidence }}</div>
+        <div class="badge">{{ f.severity }} · {{ f.confidence }}{% if f.module %} · {{ f.module }}{% endif %}</div>
         <h3>{{ f.title }} <span class="rule-id">({{ f.rule_id }})</span></h3>
         <p>{{ f.description }}</p>
         {% if f.impact %}<p><strong>Impact:</strong> {{ f.impact }}</p>{% endif %}
@@ -220,7 +256,7 @@
     </section>
 
     <footer>
-      <strong>Dapptility</strong> · Confidential preliminary assessment<br>
+      <strong>Dapptility</strong> · Personal security assessment<br>
       Private report link: <a href="{{ report_url }}">{{ report_url }}</a>
     </footer>
   </div>

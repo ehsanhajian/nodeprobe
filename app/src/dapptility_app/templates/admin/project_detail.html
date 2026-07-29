@@ -94,6 +94,67 @@
 </div>
 
 <div class="card">
+  <div class="table-meta">
+    <h2 style="margin:0;">Findings</h2>
+    <form method="get" class="form-inline" style="gap:0.4rem;">
+      <select name="module" style="width:auto;min-width:7rem;" onchange="this.form.submit()">
+        <option value="">All modules</option>
+        <option value="web" {% if filter_module == 'web' %}selected{% endif %}>web</option>
+        <option value="rpc" {% if filter_module == 'rpc' %}selected{% endif %}>rpc</option>
+        <option value="contract" {% if filter_module == 'contract' %}selected{% endif %}>contract</option>
+      </select>
+      <select name="severity" style="width:auto;min-width:7rem;" onchange="this.form.submit()">
+        <option value="">All severities</option>
+        {% for sev in ['Critical', 'High', 'Medium', 'Low', 'Info'] %}
+        <option value="{{ sev }}" {% if filter_severity == sev %}selected{% endif %}>{{ sev }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+  {% if latest_modules %}
+  <p class="muted text-sm" style="margin-bottom:0.75rem;">
+    Showing latest completed scan per module:
+    {% for mod, scan in latest_modules.items() %}
+      <a href="/admin/scans/{{ scan.id }}">{{ mod }} #{{ scan.id }}</a>{% if not loop.last %} · {% endif %}
+    {% endfor %}
+  </p>
+  {% endif %}
+  <table>
+    <thead>
+      <tr><th>Severity</th><th>Module</th><th>Finding</th><th>Status</th><th>Review</th></tr>
+    </thead>
+    <tbody>
+    {% for f in findings %}
+    <tr>
+      <td><span class="badge {{ f.severity|lower }}">{{ f.severity }}</span></td>
+      <td><span class="badge info">{{ f.module or '—' }}</span></td>
+      <td>
+        <strong style="font-size:0.9rem;">{{ f.title }}</strong>
+        <div class="muted text-sm" style="margin-top:0.15rem;">{{ f.description }}</div>
+        <div class="muted text-xs" style="margin-top:0.15rem;">{{ f.rule_id }} · <a href="/admin/scans/{{ f.scan_id }}">scan #{{ f.scan_id }}</a></div>
+      </td>
+      <td><span class="status-pill {{ f.status }}">{{ f.status }}</span></td>
+      <td>
+        <form method="post" action="/admin/findings/{{ f.id }}/status" class="form-inline">
+          <input type="hidden" name="return_to" value="/admin/projects/{{ project.id }}{% if filter_module or filter_severity %}?{% if filter_module %}module={{ filter_module }}{% endif %}{% if filter_module and filter_severity %}&{% endif %}{% if filter_severity %}severity={{ filter_severity }}{% endif %}{% endif %}">
+          <select name="status" style="width:auto;min-width:7.5rem;">
+            <option value="open" {% if f.status=='open' %}selected{% endif %}>Open</option>
+            <option value="confirmed" {% if f.status=='confirmed' %}selected{% endif %}>Confirmed</option>
+            <option value="false_positive" {% if f.status=='false_positive' %}selected{% endif %}>False positive</option>
+            <option value="rejected" {% if f.status=='rejected' %}selected{% endif %}>Rejected</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" type="submit">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted" style="text-align:center;padding:1.25rem;">No findings for this filter. Run web, RPC, and/or contract scans first.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
   <h2>Scans</h2>
   <table>
     <thead>
@@ -120,20 +181,31 @@
 </div>
 
 <div class="card">
-  <h2>Reports</h2>
+  <div class="table-meta">
+    <h2 style="margin:0;">Reports</h2>
+    {% if latest_modules %}
+    <form method="post" action="/admin/projects/{{ project.id }}/report">
+      <button class="btn btn-primary btn-sm" type="submit" title="Aggregate latest web + RPC + contract scans">
+        Build project report
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  <p class="muted text-sm" style="margin-bottom:0.75rem;">Project reports combine findings from the latest completed scan in each module.</p>
   <table>
     <thead>
-      <tr><th>Title</th><th>Status</th><th>Private link</th></tr>
+      <tr><th>Title</th><th>Type</th><th>Status</th><th>Private link</th></tr>
     </thead>
     <tbody>
     {% for report in reports %}
     <tr>
       <td><a href="/admin/reports/{{ report.id }}">{{ report.title }}</a></td>
+      <td><span class="badge info">{{ report.report_type }}</span></td>
       <td><span class="status-pill {{ report.status }}">{{ report.status }}</span></td>
       <td>{% if report.status == 'published' %}<a href="/r/{{ report.token }}" class="font-mono text-sm">/r/{{ report.token[:12] }}…</a>{% else %}<span class="muted">—</span>{% endif %}</td>
     </tr>
     {% else %}
-    <tr><td colspan="3" class="muted" style="text-align:center;padding:1.25rem;">No reports yet. Run a scan first.</td></tr>
+    <tr><td colspan="4" class="muted" style="text-align:center;padding:1.25rem;">No reports yet. Run scans, then build a project report.</td></tr>
     {% endfor %}
     </tbody>
   </table>

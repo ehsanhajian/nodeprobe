@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from dapptility_app.config import settings
 from dapptility_app.database import (
@@ -275,6 +275,114 @@ def outreach_report_findings(scan: Scan) -> list[Finding]:
     ]
 
 
+SEVERITY_ORDER = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3, "Info": 4}
+
+
+def latest_completed_scans_by_module(db: Session, project_id: int) -> dict[str, Scan]:
+    """Latest completed scan per module for a project."""
+    scans = (
+        db.query(Scan)
+        .join(Endpoint)
+        .options(joinedload(Scan.endpoint), joinedload(Scan.findings))
+        .filter(Endpoint.project_id == project_id, Scan.status == "completed")
+        .order_by(Scan.created_at.desc())
+        .all()
+    )
+    latest: dict[str, Scan] = {}
+    for scan in scans:
+        module = (scan.module or scan.endpoint.kind or "rpc").lower()
+        if module == "website":
+            module = "web"
+        if module not in latest:
+            latest[module] = scan
+    return latest
+
+
+def list_project_findings(
+    db: Session,
+    project_id: int,
+    *,
+    module: str | None = None,
+    severity: str | None = None,
+    include_expected: bool = False,
+) -> list[Finding]:
+    """Findings across latest completed scan per module (or all completed if needed).
+
+    Uses latest scan per module so the project view reflects current posture.
+    """
+    latest = latest_completed_scans_by_module(db, project_id)
+    if module:
+        key = module.lower()
+        if key == "website":
+            key = "web"
+        latest = {k: v for k, v in latest.items() if k == key}
+
+    findings: list[Finding] = []
+    for mod, scan in latest.items():
+        for finding in scan.findings:
+            if not include_expected and finding.kind == "expected_surface":
+                continue
+            if severity and finding.severity.lower() != severity.lower():
+                continue
+            findings.append(finding)
+
+    findings.sort(
+        key=lambda f: (
+            SEVERITY_ORDER.get(f.severity, 99),
+            (f.module or ""),
+            f.rule_id,
+        )
+    )
+    return findings
+
+
+def create_project_report(
+    db: Session,
+    project: Project,
+    *,
+    title: str | None = None,
+    publish: bool = False,
+) -> Report:
+    """Aggregate latest web/rpc/contract scans into one project report."""
+    latest = latest_completed_scans_by_module(db, project.id)
+    if not latest:
+        raise ValueError("No completed scans to include in a project report")
+
+    findings = list_project_findings(db, project.id)
+    findings = [f for f in findings if f.status in {"open", "confirmed"}]
+    if not findings:
+        raise ValueError("No open/confirmed findings across latest module scans")
+
+    # Anchor FK on the newest of the included scans
+    primary = max(
+        latest.values(),
+        key=lambda s: s.created_at or datetime(1970, 1, 1, tzinfo=timezone.utc),
+    )
+    report = create_report_draft(
+        db,
+        project,
+        primary,
+        title=title or f"Project security assessment — {project.name}",
+        report_type="project",
+    )
+    module_summaries = [
+        {
+            "module": mod,
+            "scan_id": scan.id,
+            "profile": scan.profile,
+            "score": scan.score,
+            "label": scan.endpoint.label,
+            "network_name": scan.network_name,
+            "chain_id": scan.chain_id,
+        }
+        for mod, scan in sorted(latest.items())
+    ]
+    build_and_store_report(db, report, findings=findings, module_summaries=module_summaries)
+    if publish:
+        publish_report(db, report)
+    return report
+
+
 def create_report_draft(
     db: Session,
     project: Project,
@@ -294,7 +402,7 @@ def create_report_draft(
     db.add(report)
     db.commit()
     db.refresh(report)
-    log_action(db, "report.create", f"report_id={report.id}")
+    log_action(db, "report.create", f"report_id={report.id} type={report_type}")
     return report
 
 
@@ -303,6 +411,7 @@ def build_and_store_report(
     report: Report,
     *,
     findings: list[Finding] | None = None,
+    module_summaries: list[dict] | None = None,
 ) -> Report:
     project = report.project
     scan = report.scan
@@ -316,6 +425,7 @@ def build_and_store_report(
         scan=scan,
         findings=findings,
         report=report,
+        module_summaries=module_summaries,
     )
     html_path = settings.reports_dir / f"report-{report.id}.html"
     html_path.write_text(html)
@@ -329,6 +439,7 @@ def build_and_store_report(
         findings=findings,
         report=report,
         output_path=pdf_path,
+        module_summaries=module_summaries,
     )
     report.pdf_path = str(pdf_path)
     db.commit()
