@@ -125,11 +125,23 @@ class ScannerEngine:
                 if not aborted:
                     try:
                         killswitch.check()
-                        for item in run_evm_escalations(client, context, findings):
+                        children = run_evm_escalations(client, context, findings)
+                        by_parent: dict[str, list[str]] = {}
+                        for item in children:
+                            if item.parent_rule_id:
+                                by_parent.setdefault(item.parent_rule_id, []).append(item.rule_id)
                             if item.kind == CheckKind.EXPECTED_SURFACE:
                                 expected.append(item)
                             else:
                                 findings.append(item)
+                        # Annotate parents so the report shows escalation happened
+                        for finding in findings:
+                            if finding.rule_id in by_parent and finding.parent_rule_id is None:
+                                finding.evidence = {
+                                    **(finding.evidence or {}),
+                                    "escalation_ran": True,
+                                    "escalation_children": by_parent[finding.rule_id],
+                                }
                     except (BudgetExceeded, KillSwitchActive) as exc:
                         aborted = True
                         abort_reason = str(exc)

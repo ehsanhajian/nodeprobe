@@ -82,52 +82,126 @@ def _escalate_eth_accounts(client: RpcClient, context: dict, parent: Finding) ->
             )
         ]
     accounts = result if isinstance(result, list) else []
+    out: list[Finding] = []
+
     if not accounts:
-        return [
+        out.append(
             _child(
                 parent=parent,
                 step="CONFIRM",
-                title="eth_accounts reachable but empty",
+                title="Next: eth_accounts returns empty list",
                 severity=Severity.MEDIUM,
                 kind=CheckKind.FINDING,
                 description=(
-                    "Escalation confirmed eth_accounts works and returned []. "
-                    "No local accounts disclosed, but the method is not filtered."
+                    "Follow-up confirmed eth_accounts works and returned []. "
+                    "No local accounts disclosed — probing related privileged methods next."
                 ),
-                evidence={"account_count": 0, "accounts": []},
+                evidence={"account_count": 0, "accounts": [], "step": "confirm_empty"},
                 score_impact=6,
                 impact="Unfiltered eth_accounts aids recon even when empty.",
                 remediation="Deny eth_accounts on public RPC gateways.",
             )
-        ]
-
-    sample = [str(a) for a in accounts[:3]]
-    evidence: dict[str, Any] = {
-        "account_count": len(accounts),
-        "accounts_sample": sample,
-    }
-    # Deep: pull one balance as impact confirmation (read-only)
-    if client.limits.name == ScanProfile.DEEP and sample:
-        bal = client.call("eth_getBalance", [sample[0], "latest"])
-        if not (isinstance(bal, dict) and ("__rpc_error__" in bal or "__http_error__" in bal)):
-            evidence["sample_balance"] = bal
-    return [
-        _child(
-            parent=parent,
-            step="IMPACT",
-            title=f"eth_accounts disclosed {len(accounts)} account(s)",
-            severity=Severity.CRITICAL,
-            kind=CheckKind.FINDING,
-            description=(
-                f"Escalation pulled {len(accounts)} account(s) from eth_accounts. "
-                "Public RPCs should never expose node-local accounts."
-            ),
-            evidence=evidence,
-            score_impact=30,
-            impact="Disclosed accounts enable targeted recon and amplify unlocked-key risk.",
-            remediation="Disable eth_accounts; never unlock keys on public listeners.",
         )
+    else:
+        sample = [str(a) for a in accounts[:3]]
+        evidence: dict[str, Any] = {
+            "account_count": len(accounts),
+            "accounts_sample": sample,
+            "step": "accounts_disclosed",
+        }
+        if client.limits.name == ScanProfile.DEEP and sample:
+            bal = client.call("eth_getBalance", [sample[0], "latest"])
+            if not (isinstance(bal, dict) and ("__rpc_error__" in bal or "__http_error__" in bal)):
+                evidence["sample_balance"] = bal
+        out.append(
+            _child(
+                parent=parent,
+                step="IMPACT",
+                title=f"Next: eth_accounts disclosed {len(accounts)} account(s)",
+                severity=Severity.CRITICAL,
+                kind=CheckKind.FINDING,
+                description=(
+                    f"Follow-up pulled {len(accounts)} account(s) from eth_accounts. "
+                    "Public RPCs should never expose node-local accounts."
+                ),
+                evidence=evidence,
+                score_impact=30,
+                impact="Disclosed accounts enable targeted recon and amplify unlocked-key risk.",
+                remediation="Disable eth_accounts; never unlock keys on public listeners.",
+            )
+        )
+
+    # Always take attacker-style next steps after eth_accounts hits
+    next_probes = [
+        ("personal_listAccounts", "personal_* account listing"),
+        ("personal_listWallets", "personal_* wallet listing"),
+        ("eth_sendTransaction", "unlocked-account send path"),
+        ("personal_sendTransaction", "personal send path"),
     ]
+    if client.limits.name == ScanProfile.DEEP:
+        next_probes.extend(
+            [
+                ("personal_newAccount", "account creation API"),
+                ("eth_sign", "eth_sign on node keys"),
+            ]
+        )
+
+    exposed: list[str] = []
+    blocked: list[str] = []
+    details: dict[str, Any] = {}
+    for method, _label in next_probes:
+        ok, detail = client.method_available(method)
+        if ok:
+            exposed.append(method)
+            details[method] = _trim(detail)
+        else:
+            blocked.append(method)
+
+    if exposed:
+        out.append(
+            _child(
+                parent=parent,
+                step="NEXT",
+                title=f"Next: {len(exposed)} related privileged method(s) also open",
+                severity=Severity.CRITICAL
+                if any(m.startswith("personal_") or m == "eth_sendTransaction" for m in exposed)
+                else Severity.HIGH,
+                kind=CheckKind.FINDING,
+                description=(
+                    "After eth_accounts, follow-up probes found related methods available: "
+                    + ", ".join(exposed)
+                    + "."
+                ),
+                evidence={
+                    "step": "related_methods",
+                    "exposed": exposed,
+                    "blocked": blocked,
+                    "details": details,
+                },
+                score_impact=25 if any(m.startswith("personal_") for m in exposed) else 15,
+                impact="Combined eth_accounts + personal/send surface is a high-value attack path.",
+                remediation="Allowlist only public read methods; deny personal_* and eth_sendTransaction.",
+            )
+        )
+    else:
+        out.append(
+            _child(
+                parent=parent,
+                step="NEXT",
+                title="Next: related personal/send methods appear blocked",
+                severity=Severity.INFO,
+                kind=CheckKind.INFO,
+                description=(
+                    "Follow-up after eth_accounts: personal_* / eth_sendTransaction probes "
+                    "were not available (good). eth_accounts itself is still unfiltered."
+                ),
+                evidence={"step": "related_methods", "exposed": [], "blocked": blocked},
+                score_impact=0,
+                impact="Attackers will keep probing other namespaces, but signing paths look closed.",
+                remediation="Still deny eth_accounts on the public gateway.",
+            )
+        )
+    return out
 
 
 def _escalate_admin(client: RpcClient, context: dict, parent: Finding) -> list[Finding]:

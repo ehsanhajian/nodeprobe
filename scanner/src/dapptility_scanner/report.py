@@ -64,6 +64,29 @@ def _sorted_findings(findings: list[Finding]) -> list[Finding]:
     )
 
 
+def _ordered_findings(findings: list[Finding]) -> list[Finding]:
+    """Parents by severity, each followed immediately by its escalation children."""
+    parents = [f for f in findings if not f.parent_rule_id]
+    children_map: dict[str, list[Finding]] = {}
+    orphans: list[Finding] = []
+    for f in findings:
+        if not f.parent_rule_id:
+            continue
+        if any(p.rule_id == f.parent_rule_id for p in parents):
+            children_map.setdefault(f.parent_rule_id, []).append(f)
+        else:
+            orphans.append(f)
+    parents = _sorted_findings(parents)
+    ordered: list[Finding] = []
+    for parent in parents:
+        ordered.append(parent)
+        kids = children_map.get(parent.rule_id, [])
+        kids.sort(key=lambda k: k.rule_id)
+        ordered.extend(kids)
+    ordered.extend(_sorted_findings(orphans))
+    return ordered
+
+
 def _hr_duration(ms: int) -> str:
     if ms < 1000:
         return f"{ms}ms"
@@ -155,7 +178,7 @@ def format_human_report(result: ScanResult, *, color: bool | None = None) -> str
             code = _paint(f"[{err.code}]", _Style.RED, enabled=enabled)
             lines.append(f"  {code} {err.message}")
 
-    findings = _sorted_findings(result.findings)
+    findings = _ordered_findings(result.findings)
     lines.append("")
     section(f"Findings ({len(findings)})", _Style.BOLD)
     if not findings:
@@ -167,30 +190,46 @@ def format_human_report(result: ScanResult, *, color: bool | None = None) -> str
                 _SEVERITY_STYLE.get(f.severity, ""),
                 enabled=enabled,
             )
-            lines.append(f"{i}. {sev} {_paint(f.title, _Style.BOLD, enabled=enabled)}")
+            prefix = "   ↳ " if f.parent_rule_id else ""
+            title = f.title
+            if f.parent_rule_id:
+                title = f"Next step · {f.title}" if not f.title.lower().startswith("next") else f.title
+            lines.append(
+                f"{prefix}{i}. {sev} {_paint(title, _Style.BOLD, enabled=enabled)}"
+            )
             meta = f"{f.rule_id} · {f.category} · {f.confidence.value}"
             if f.parent_rule_id:
-                meta += f" · escalation of {f.parent_rule_id}"
-            lines.append(f"   {_paint(meta, _Style.DIM, enabled=enabled)}")
-            lines.append(f"   {f.description}")
+                meta += f" · from {f.parent_rule_id}"
+            elif (f.evidence or {}).get("escalation_ran"):
+                kids = (f.evidence or {}).get("escalation_children") or []
+                meta += f" · escalated → {', '.join(kids)}"
+            lines.append(
+                f"{'     ' if f.parent_rule_id else '   '}"
+                f"{_paint(meta, _Style.DIM, enabled=enabled)}"
+            )
+            indent = "      " if f.parent_rule_id else "   "
+            lines.append(f"{indent}{f.description}")
             if f.impact:
                 lines.append(
-                    f"   {_paint('Impact:', _Style.DIM, enabled=enabled)} {f.impact}"
+                    f"{indent}{_paint('Impact:', _Style.DIM, enabled=enabled)} {f.impact}"
                 )
             if f.remediation:
                 lines.append(
-                    f"   {_paint('Fix:', _Style.GREEN, enabled=enabled)}    {f.remediation}"
+                    f"{indent}{_paint('Fix:', _Style.GREEN, enabled=enabled)}    {f.remediation}"
                 )
             if f.evidence:
                 parts = []
                 for key_name, value in f.evidence.items():
+                    if key_name in {"escalation_ran", "escalation_children"}:
+                        continue
                     text = str(value)
                     if len(text) > 80:
                         text = text[:77] + "..."
                     parts.append(f"{key_name}={text}")
-                lines.append(
-                    f"   {_paint('Evidence:', _Style.DIM, enabled=enabled)} {'; '.join(parts)}"
-                )
+                if parts:
+                    lines.append(
+                        f"{indent}{_paint('Evidence:', _Style.DIM, enabled=enabled)} {'; '.join(parts)}"
+                    )
             lines.append("")
 
     if result.expected_surface:

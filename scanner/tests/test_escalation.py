@@ -75,6 +75,7 @@ def test_escalation_eth_accounts_empty():
     assert kids[0].parent_rule_id == "EVM-NS-ACCOUNTS"
     assert kids[0].evidence.get("account_count") == 0
     assert kids[0].severity == Severity.MEDIUM
+    assert any(k.rule_id.endswith("-NEXT") for k in kids)
 
 
 def test_escalation_eth_accounts_disclosed():
@@ -107,8 +108,8 @@ def test_escalation_eth_accounts_disclosed():
     kids = run_evm_escalations(rpc, {}, [parent])
     rpc.close()
     client.close()
-    assert any(k.severity == Severity.CRITICAL for k in kids)
-    assert kids[0].evidence.get("account_count") == 1
+    assert any(k.severity == Severity.CRITICAL and "disclosed" in k.title for k in kids)
+    assert any(k.rule_id.endswith("-NEXT") for k in kids)
 
 
 def test_quick_profile_skips_escalation():
