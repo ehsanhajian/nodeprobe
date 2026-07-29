@@ -140,6 +140,53 @@ class AuditLog(Base):
     )
 
 
+class DiscoveryRun(Base):
+    __tablename__ = "discovery_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    status: Mapped[str] = mapped_column(String(32), default="running")
+    source: Mapped[str] = mapped_column(String(64), default="chainlist")
+    chains_seen: Mapped[int] = mapped_column(Integer, default=0)
+    rpc_candidates: Mapped[int] = mapped_column(Integer, default=0)
+    leads_new: Mapped[int] = mapped_column(Integer, default=0)
+    leads_updated: Mapped[int] = mapped_column(Integer, default=0)
+    leads_promoted: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DiscoveredLead(Base):
+    __tablename__ = "discovered_leads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    chain_id: Mapped[int] = mapped_column(Integer, index=True)
+    chain_name: Mapped[str] = mapped_column(String(255))
+    short_name: Mapped[str | None] = mapped_column(String(64))
+    rpc_url: Mapped[str] = mapped_column(String(1024), unique=True, index=True)
+    rpc_url_normalized: Mapped[str] = mapped_column(String(1024), index=True)
+    website: Mapped[str | None] = mapped_column(String(512))
+    is_testnet: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_third_party_provider: Mapped[bool] = mapped_column(Boolean, default=False)
+    provider_name: Mapped[str | None] = mapped_column(String(64))
+    source: Mapped[str] = mapped_column(String(64), default="chainlist")
+    status: Mapped[str] = mapped_column(String(32), default="new", index=True)
+    lead_score: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    score_breakdown_json: Mapped[str | None] = mapped_column(Text)
+    discovery_run_id: Mapped[int | None] = mapped_column(ForeignKey("discovery_runs.id"))
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"))
+    first_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    project: Mapped[Project | None] = relationship()
+
+
 engine = create_engine(
     settings.database_url,
     connect_args={"check_same_thread": False}

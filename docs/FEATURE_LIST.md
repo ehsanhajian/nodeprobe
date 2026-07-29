@@ -700,7 +700,6 @@ V1:
 
 ### P0 — Required for the First Sale
 
-- Landing page with embedded How It Works / What We Check
 - Pricing page and sample report
 - Email magic-link authentication
 - HTTP RPC endpoint submission
@@ -724,6 +723,11 @@ V1:
 - Evidence retention policy and raw-log access controls
 - SSRF and scan safety controls including global kill switch
 - Terms, Privacy, Acceptable Use, and Scan Safety policies
+
+### P3 — Marketing (deferred)
+
+- Standalone landing page with embedded How It Works / What We Check
+- Separate marketing pages as traffic justifies them
 
 ### MVP Definition of Done
 
@@ -753,8 +757,6 @@ The MVP is complete when:
 - Advanced rule versioning
 - Complete transactional email set
 - Outreach CRM states and scheduled follow-ups
-- Automated lead scoring
-- ChainList data import
 - Expanded third-party provider catalog
 - Additional remediation templates
 - Revenue and conversion dashboard

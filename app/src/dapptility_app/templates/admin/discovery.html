@@ -1,0 +1,90 @@
+{% extends "admin/base.html" %}
+{% block title %}Discovery — Dapptility{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;">
+  <h1>Discovery inbox</h1>
+  <form method="post" action="/admin/discovery/run">
+    <button class="btn" type="submit">Run discovery now</button>
+  </form>
+</div>
+<p class="muted">Daily ChainList sync finds new EVM networks and RPC endpoints, scores them, and auto-promotes high-value leads.</p>
+
+<div class="card">
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+    <a href="/admin/discovery?status=new" class="btn {% if status == 'new' %}secondary{% endif %}">New</a>
+    <a href="/admin/discovery?status=promoted" class="btn {% if status == 'promoted' %}secondary{% endif %}">Promoted</a>
+    <a href="/admin/discovery?status=dismissed" class="btn {% if status == 'dismissed' %}secondary{% endif %}">Dismissed</a>
+    <a href="/admin/discovery?status=all" class="btn {% if status == 'all' %}secondary{% endif %}">All</a>
+  </div>
+  <table>
+    <tr>
+      <th>Score</th>
+      <th>Network</th>
+      <th>RPC</th>
+      <th>Signals</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+    {% for lead in leads %}
+    <tr>
+      <td><strong>{{ lead.lead_score }}</strong></td>
+      <td>
+        {{ lead.chain_name }}<br>
+        <span class="muted">chain {{ lead.chain_id }}{% if lead.is_testnet %} · testnet{% endif %}</span>
+      </td>
+      <td style="max-width:280px;word-break:break-all;">
+        {{ lead.rpc_url }}
+        {% if lead.is_third_party_provider %}
+        <br><span class="badge">{{ lead.provider_name }}</span>
+        {% endif %}
+      </td>
+      <td class="muted" style="max-width:220px;">
+        <ul style="margin:0;padding-left:1.1rem;">
+        {% for reason in lead|score_reasons %}
+          <li>{{ reason }}</li>
+        {% else %}
+          <li>—</li>
+        {% endfor %}
+        </ul>
+      </td>
+      <td>{{ lead.status }}</td>
+      <td>
+        {% if lead.status == 'new' and not lead.is_third_party_provider %}
+        <form method="post" action="/admin/discovery/{{ lead.id }}/promote" style="display:inline;">
+          <button class="btn" type="submit">Promote</button>
+        </form>
+        <form method="post" action="/admin/discovery/{{ lead.id }}/dismiss" style="display:inline;">
+          <button class="btn secondary" type="submit">Dismiss</button>
+        </form>
+        {% elif lead.project_id %}
+        <a href="/admin/projects/{{ lead.project_id }}">View project</a>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">No leads in this view. Run discovery to import from ChainList.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="card">
+  <h2>Recent discovery runs</h2>
+  <table>
+    <tr><th>ID</th><th>Status</th><th>Chains</th><th>RPCs</th><th>New</th><th>Updated</th><th>Promoted</th><th>Started</th></tr>
+    {% for run in runs %}
+    <tr>
+      <td>#{{ run.id }}</td>
+      <td>{{ run.status }}</td>
+      <td>{{ run.chains_seen }}</td>
+      <td>{{ run.rpc_candidates }}</td>
+      <td>{{ run.leads_new }}</td>
+      <td>{{ run.leads_updated }}</td>
+      <td>{{ run.leads_promoted }}</td>
+      <td class="muted">{{ run.started_at.strftime('%Y-%m-%d %H:%M UTC') if run.started_at else '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="muted">No runs yet.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -54,6 +54,10 @@ Data (SQLite DB, reports, raw scan JSON) is stored in the `dapptility-data` Dock
 | `ACME_EMAIL` | Let's Encrypt registration email |
 | `DAPPILITY_ADMIN_PASSWORD` | Admin panel password |
 | `DAPPILITY_SECRET_KEY` | App secret key |
+| `DAPPILITY_DISCOVERY_ENABLED` | Daily ChainList discovery (`true`/`false`) |
+| `DAPPILITY_DISCOVERY_HOUR_UTC` | Discovery cron hour (UTC, default `6`) |
+| `DAPPILITY_DISCOVERY_AUTO_PROMOTE_SCORE` | Auto-promote leads at or above this score (default `70`) |
+| `DAPPILITY_CHAINLIST_URL` | ChainList JSON feed URL |
 
 ## Troubleshooting
 

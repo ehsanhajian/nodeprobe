@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from dapptility_app.config import settings
 from dapptility_app.database import (
     AuditLog,
+    DiscoveredLead,
+    DiscoveryRun,
     Endpoint,
     Finding,
     Project,
@@ -34,6 +36,9 @@ def dashboard_stats(db: Session) -> dict:
         "completed_scans": db.query(func.count(Scan.id)).filter(Scan.status == "completed").scalar() or 0,
         "reports": db.query(func.count(Report.id)).scalar() or 0,
         "published_reports": db.query(func.count(Report.id)).filter(Report.status == "published").scalar() or 0,
+        "discovery_new": db.query(func.count(DiscoveredLead.id)).filter(DiscoveredLead.status == "new").scalar() or 0,
+        "discovery_promoted": db.query(func.count(DiscoveredLead.id)).filter(DiscoveredLead.status == "promoted").scalar() or 0,
+        "discovery_runs": db.query(func.count(DiscoveryRun.id)).scalar() or 0,
     }
 
 

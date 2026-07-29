@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -9,11 +8,25 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 
 from dapptility_app.auth import verify_admin
-from dapptility_app.database import Endpoint, Finding, Project, Report, Scan, get_db
+from dapptility_app.database import DiscoveredLead, DiscoveryRun, Endpoint, Finding, Project, Report, Scan, get_db
+from dapptility_app.services.discovery.sync import dismiss_lead, promote_lead, run_discovery_sync
 from dapptility_app.services import store
 
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
+
+
+def _score_reasons(lead: DiscoveredLead) -> list[str]:
+    if not lead.score_breakdown_json:
+        return []
+    try:
+        data = json.loads(lead.score_breakdown_json)
+    except json.JSONDecodeError:
+        return []
+    return list(data.get("reasons") or [])
+
+
+templates.env.filters["score_reasons"] = _score_reasons
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(verify_admin)])
 
@@ -252,3 +265,43 @@ def report_pdf_download(report_id: int, db: Session = Depends(get_db)):
     if not report or not report.pdf_path:
         raise HTTPException(404)
     return FileResponse(report.pdf_path, filename=f"report-{report.id}.pdf")
+
+
+@router.get("/discovery")
+def discovery_list(request: Request, db: Session = Depends(get_db), status: str = "new"):
+    query = db.query(DiscoveredLead).order_by(DiscoveredLead.lead_score.desc())
+    if status != "all":
+        query = query.filter(DiscoveredLead.status == status)
+    leads = query.limit(200).all()
+    runs = db.query(DiscoveryRun).order_by(DiscoveryRun.started_at.desc()).limit(10).all()
+    return templates.TemplateResponse(
+        request,
+        "admin/discovery.html",
+        {"leads": leads, "runs": runs, "status": status},
+    )
+
+
+@router.post("/discovery/run")
+def discovery_run_now(db: Session = Depends(get_db)):
+    run_discovery_sync(db, actor="admin")
+    return RedirectResponse("/admin/discovery", status_code=303)
+
+
+@router.post("/discovery/{lead_id}/promote")
+def discovery_promote(lead_id: int, db: Session = Depends(get_db)):
+    lead = db.query(DiscoveredLead).filter(DiscoveredLead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(404)
+    project = promote_lead(db, lead, actor="admin")
+    if project is None:
+        raise HTTPException(400, "Cannot promote third-party provider endpoint")
+    return RedirectResponse(f"/admin/projects/{project.id}", status_code=303)
+
+
+@router.post("/discovery/{lead_id}/dismiss")
+def discovery_dismiss(lead_id: int, db: Session = Depends(get_db)):
+    lead = db.query(DiscoveredLead).filter(DiscoveredLead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(404)
+    dismiss_lead(db, lead, actor="admin")
+    return RedirectResponse("/admin/discovery", status_code=303)

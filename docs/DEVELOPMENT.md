@@ -6,6 +6,7 @@
 |---|---|---|
 | M1 — Scanner CLI | **Complete** | `scanner/` |
 | M2 — Reports and Admin | **Complete** | `app/` |
+| M2.5 — Discovery inbox | **Complete** | `app/` (ChainList daily sync) |
 | M3 — Public Self-service | Not started | `app/` (planned) |
 | M4 — Verification and Payment | Not started | `app/` (planned) |
 | M5 — First Sales | Not started | — |
@@ -119,8 +120,30 @@ Admin UI: http://localhost:8000/admin (HTTP Basic `admin` / password)
 - Private report links at `/r/{token}`
 - Raw scan JSON retention (30 days, admin-only access)
 - Audit log for admin actions
+- **Discovery inbox** — daily ChainList sync, automatic lead scoring, promote/dismiss workflow
 
-### App layout
+### Discovery (admin)
+
+The admin panel scans [ChainList](https://chainlist.org) for new EVM networks and RPC endpoints. Each candidate is scored automatically (own-domain RPC, mainnet vs testnet, third-party provider detection, HTTPS, domain alignment). High-scoring leads can be auto-promoted to outbound projects.
+
+| Setting | Default | Description |
+|---|---|---|
+| `DAPPILITY_DISCOVERY_ENABLED` | `true` | Enable daily scheduler |
+| `DAPPILITY_DISCOVERY_HOUR_UTC` | `6` | Run time (UTC) |
+| `DAPPILITY_DISCOVERY_AUTO_PROMOTE_SCORE` | `70` | Auto-create project when score ≥ threshold |
+| `DAPPILITY_CHAINLIST_URL` | chainlist.org JSON | Source feed |
+
+Admin UI: `/admin/discovery` — filter by status, run now, promote, or dismiss.
+
+```
+app/src/dapptility_app/services/discovery/
+  chainlist.py    Fetch and parse ChainList JSON
+  scoring.py      Heuristic lead scoring (0–100)
+  sync.py         Sync run, promote, dismiss
+  utils.py        URL normalization
+  scheduler.py    APScheduler daily cron
+```
+
 
 ```
 app/src/dapptility_app/
@@ -139,7 +162,7 @@ cd app && pytest -q
 
 ## Next up (M3)
 
-- Public landing page and free scan flow
+- Public free scan flow (no standalone marketing landing — **P3**)
 - User accounts with magic-link auth
 - Abuse budgets and rate limiting
 

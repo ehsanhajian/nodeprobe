@@ -30,6 +30,19 @@ class Settings:
         )
         self.reports_dir = self.data_dir / "reports"
         self.raw_dir = self.data_dir / "raw"
+        self.chainlist_url = os.environ.get(
+            "DAPPILITY_CHAINLIST_URL",
+            "https://chainlist.org/rpcs.json",
+        )
+        self.discovery_enabled = os.environ.get("DAPPILITY_DISCOVERY_ENABLED", "true").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        self.discovery_hour_utc = int(os.environ.get("DAPPILITY_DISCOVERY_HOUR_UTC", "6"))
+        self.discovery_auto_promote_score = int(
+            os.environ.get("DAPPILITY_DISCOVERY_AUTO_PROMOTE_SCORE", "70")
+        )
 
 
 settings = Settings()
