@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Build / dist
+dist/
+build/
+*.egg-info/
+.next/
+out/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+*.log
+tmp/
+.cache/
+
+# Test / coverage
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Secrets and local config
+*.pem
+*.key
+credentials.json
+secrets/
+
+# Scanner artifacts (local dev)
+scan-output/
+raw-responses/

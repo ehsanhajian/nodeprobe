@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  placeholder:
+    name: Repository checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify repository structure
+        run: |
+          test -f README.md
+          test -f docs/FEATURE_LIST.md
+          echo "CI placeholder — add scanner and app test jobs as code lands."
