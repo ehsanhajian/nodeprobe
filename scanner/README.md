@@ -54,7 +54,7 @@ Human-readable report is the default on stdout (ANSI colors when stdout is a TTY
 ## Safety
 
 - Multi-chain RPC: EVM (any chain ID), Solana, Substrate/Polkadot, Cosmos/Tendermint
-- Adaptive escalation on Standard/Deep after High/Critical hits (confirm impact / sibling methods; budgeted)
+- Adaptive escalation on Standard/Deep after High/Critical (and key Medium web/contract) hits — confirm impact / sibling methods / next probes; budgeted
 - EVM names from a bundled [Chainlist](https://chainid.network) snapshot; unknown IDs use `Chain <id>`
 - SSRF / private IP / metadata / localhost blocking
 - Redirect refusal to unsafe targets

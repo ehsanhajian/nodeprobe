@@ -21,6 +21,7 @@ from dapptility_scanner.contract import (
     is_empty_code,
     normalize_address,
 )
+from dapptility_scanner.escalation_contract import run_contract_escalations
 from dapptility_scanner.killswitch import KillSwitchActive
 from dapptility_scanner.models import (
     CheckKind,
@@ -411,6 +412,27 @@ class ContractScannerEngine:
                                     score_impact=2,
                                 )
                             )
+
+                if not aborted:
+                    try:
+                        killswitch.check()
+                        for item in run_contract_escalations(
+                            client,
+                            address=self.address,
+                            findings=findings,
+                        ):
+                            if item.kind == CheckKind.EXPECTED_SURFACE:
+                                expected.append(item)
+                            else:
+                                findings.append(item)
+                    except (BudgetExceeded, KillSwitchActive) as exc:
+                        aborted = True
+                        abort_reason = str(exc)
+                        errors.append(ScanError(code="aborted", message=str(exc)))
+                    except Exception as exc:  # noqa: BLE001
+                        errors.append(
+                            ScanError(code="escalation_error", message=str(exc))
+                        )
 
                 requests_made = client.requests_made
 

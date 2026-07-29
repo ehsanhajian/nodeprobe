@@ -6,6 +6,7 @@ from typing import Any
 import httpx
 
 from dapptility_scanner import __version__, killswitch
+from dapptility_scanner.escalation_web import run_web_escalations
 from dapptility_scanner.http_client import BudgetedHttpClient
 from dapptility_scanner.killswitch import KillSwitchActive
 from dapptility_scanner.models import CheckKind, ScanError, ScanProfile, ScanResult
@@ -92,6 +93,24 @@ class WebScannerEngine:
                                 expected.append(item)
                             else:
                                 findings.append(item)
+
+                    if not aborted:
+                        try:
+                            killswitch.check()
+                            for item in run_web_escalations(client, context, findings):
+                                if item.kind == CheckKind.EXPECTED_SURFACE:
+                                    expected.append(item)
+                                else:
+                                    findings.append(item)
+                        except (BudgetExceeded, KillSwitchActive) as exc:
+                            aborted = True
+                            abort_reason = str(exc)
+                            errors.append(ScanError(code="aborted", message=str(exc)))
+                        except Exception as exc:  # noqa: BLE001
+                            errors.append(
+                                ScanError(code="escalation_error", message=str(exc))
+                            )
+
                 requests_made = client.requests_made
 
         except KillSwitchActive as exc:

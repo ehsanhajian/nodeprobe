@@ -68,7 +68,8 @@ scanner/src/dapptility_scanner/
   cli.py          CLI entrypoint
   report.py       Human-readable (colorized) scan report formatting
   engine.py       EVM scan orchestration
-  escalation.py   Finding-driven follow-ups (Standard/Deep)
+  escalation.py   EVM finding-driven follow-ups (Standard/Deep)
+  escalation_web.py / escalation_contract.py  Web + contract follow-ups
   multichain/     Solana / Substrate / Cosmos engines + auto-detect
   profiles.py     Profile limits
   safety.py       SSRF and target validation
@@ -103,7 +104,7 @@ scanner/src/dapptility_scanner/
 - No redirect following to unvalidated targets
 - Per-profile request count, RPS, and duration ceilings
 - Presence-only namespace probes on lighter profiles (no expensive payloads)
-- Adaptive escalation on Standard/Deep (bounded impact confirms / sibling probes)
+- Adaptive escalation on Standard/Deep (bounded impact confirms / sibling probes for RPC, web, and contracts)
 - Optional third-party provider blocking
 - Kill switch file: `/tmp/dapptility-scan-kill` or `DAPPILITY_KILL_SWITCH` env var
 

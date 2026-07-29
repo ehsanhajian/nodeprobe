@@ -94,10 +94,12 @@ Auto-detect: `dapptility-scan rpc <url>` (or `--family auto|evm|solana|substrate
 
 When a High/Critical namespace (or sensitive-method) finding appears, the scanner runs **bounded follow-ups** to confirm impact:
 
-- EVM: e.g. `eth_accounts` → empty vs disclosed accounts; `admin_nodeInfo` → truncated metadata; sibling namespace probes
-- Solana / Substrate / Cosmos: sibling privileged-method confirms
+- **EVM RPC:** e.g. `eth_accounts` → empty vs disclosed accounts → personal/send probes → `eth_sendTransaction` impact class
+- **Web:** missing HSTS → cleartext HTTP check; missing CSP → framing/inline-script follow-ups; server banner → sensitive path spot-checks
+- **Contract:** proxy → fetch implementation bytecode / opcodes; Ownable / SELFDESTRUCT → `owner()` eth_call; unverified → owner probe
+- **Solana / Substrate / Cosmos:** sibling privileged-method confirms
 
-Quick profile skips escalation. Follow-ups share the same request budget and never send exploit/write payloads. Child findings set `parent_rule_id` and appear as “escalation of …” in the human report.
+Quick profile skips escalation. Follow-ups share the same request budget and never send exploit/write payloads. Child findings set `parent_rule_id` and appear as nested “Next: …” steps in the human report.
 
 WebSocket RPC and non-EVM program/contract analysis: later.
 
