@@ -4,27 +4,21 @@
 
 | Piece | Status | Location |
 |---|---|---|
-| Multi-chain RPC CLI (EVM / Solana / Substrate / Cosmos) | **Done** | `scanner/` |
-| Human + colored CLI reports (`--json` opt-in) | **Done** | `scanner/` |
-| Console, persistence, reports | **Done** | `app/` |
-| ChainList discovery (optional inventory) | Present | `app/` — optional |
-| Web scanner | **Done** | `scanner/` |
-| EVM smart contract scanner | **Done** | `scanner/` |
-| Multi-target projects + unified reports | **Done** | `app/` |
+| CLI multi-scanner (`dapptility-scan`) | **Done** | `scanner/` |
+| Website scanner | **Done** | `scanner/` |
+| Multi-chain RPC (EVM / Solana / Substrate / Cosmos) | **Done** | `scanner/` |
+| EVM contract scanner | **Done** | `scanner/` |
+| Human + colored reports (`--json` opt-in) | **Done** | `scanner/` |
+| Adaptive escalation (Standard/Deep) | **Done** | RPC / web / contract |
 
-Product scope: [FEATURE_LIST.md](FEATURE_LIST.md) (personal tool — no SaaS/marketing).  
-Backlog: [GitHub issues](https://github.com/ehsanhajian/dapptility/issues) (label `personal-tool`).
+Product scope: [FEATURE_LIST.md](FEATURE_LIST.md).
 
 ## Prerequisites
 
 - Python 3.10+
 - `python3-venv` (on Ubuntu: `sudo apt install python3.10-venv`)
 
-## Scanner
-
-Python package + CLI for web, multi-chain RPC, and EVM contracts.
-
-### Install
+## Install
 
 ```bash
 cd scanner
@@ -33,82 +27,53 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-### Commands
+## Commands
 
 ```bash
-dapptility-scan profiles          # scan profile budgets
-dapptility-scan rules             # registered rule catalog
-dapptility-scan rpc <URL>         # multi-chain RPC (auto-detect)
-dapptility-scan scan <URL>        # EVM RPC (default: Quick)
+dapptility-scan profiles
+dapptility-scan rules --module all
+dapptility-scan rpc <URL>              # auto-detect family
+dapptility-scan scan <URL>             # EVM
 dapptility-scan solana <URL>
 dapptility-scan substrate <URL>
 dapptility-scan cosmos <URL>
-dapptility-scan web <URL>         # website HTTP/TLS scan
-dapptility-scan contract <address> --chain <id> --rpc <url>
+dapptility-scan web <URL>
+dapptility-scan contract <address> --rpc <url> [--chain <id>]
 ```
 
 Options:
 
-- `--profile Quick|Standard|Deep` (aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep)
-- `--family auto|evm|solana|substrate|cosmos` — for `rpc` command
-- `--block-providers` — block known third-party RPC hosts (EVM only)
-- `--json` — machine-readable JSON instead of the human report
-- `--pretty` — with `--json`, indent JSON (human report is the default without `--json`)
-- `--color` / `--no-color` — force or disable ANSI colors in the human report
+- `--profile Quick|Standard|Deep`
+- `--family auto|evm|solana|substrate|cosmos` (for `rpc`)
+- `--block-providers` (EVM only)
+- `--json` / `--pretty` / `--color` / `--no-color`
 
-Exit codes:
+Exit codes: `0` completed · `2` blocked/aborted
 
-- `0` — scan completed
-- `2` — blocked/aborted (unsafe target, provider block, unknown family, kill switch)
-
-### Architecture
+## Architecture
 
 ```
 scanner/src/dapptility_scanner/
-  cli.py          CLI entrypoint
-  report.py       Human-readable (colorized) scan report formatting
-  engine.py       EVM scan orchestration
-  escalation.py   EVM finding-driven follow-ups (Standard/Deep)
-  escalation_web.py / escalation_contract.py  Web + contract follow-ups
-  multichain/     Solana / Substrate / Cosmos engines + auto-detect
-  profiles.py     Profile limits
-  safety.py       SSRF and target validation
-  rpc.py          Budgeted JSON-RPC client
-  chains.py       EVM chain ID → name (bundled Chainlist snapshot)
-  data/           Package data (chains_mini.json)
-  providers.py    Third-party provider detection
-  killswitch.py   Global emergency stop
-  scoring.py      0–100 security score
-  web_engine.py   Website scanner
-  contract_engine.py  EVM contract scanner
-  rules/          Pluggable EVM + web rule implementations
+  cli.py                 CLI entrypoint
+  report.py              Human-readable (colorized) reports
+  engine.py              EVM RPC orchestration
+  web_engine.py          Website scanner
+  contract_engine.py     EVM contract scanner
+  escalation*.py         Finding-driven follow-ups
+  multichain/            Solana / Substrate / Cosmos + auto-detect
+  chains.py + data/      EVM chain ID → name (Chainlist snapshot)
+  rules/                 EVM + web rules
 ```
 
-### RPC rules (current)
+## Safety controls
 
-| ID | Category |
-|---|---|
-| EVM-IDENT-001–003 | Network identity |
-| EVM-CLIENT-001–002 | Client / header exposure |
-| EVM-HTTP-001–002 | Content-Type, CORS |
-| EVM-TLS-001 | TLS certificate |
-| EVM-SURFACE-001 | Expected public RPC surface |
-| EVM-NS-* | Privileged namespace presence probes |
-| EVM-NS-*-CONFIRM/IMPACT/SIBLING | Escalation follow-ups (Standard/Deep) |
-| SOL-* / SUB-* / COS-* | Solana / Substrate / Cosmos RPC rules (+ sibling escalations) |
+- Block localhost, private/reserved IPs, cloud metadata
+- DNS validation, redirect policy
+- Per-profile budgets
+- Kill switch: `/tmp/dapptility-scan-kill` or `DAPPILITY_KILL_SWITCH`
+- Escalation is confirmation-oriented (no exploit payloads)
 
-### Safety controls
-
-- Block localhost, private/reserved IPs, and cloud metadata ranges
-- DNS resolution validation (reject private resolved addresses)
-- No redirect following to unvalidated targets
-- Per-profile request count, RPS, and duration ceilings
-- Presence-only namespace probes on lighter profiles (no expensive payloads)
-- Adaptive escalation on Standard/Deep (bounded impact confirms / sibling probes for RPC, web, and contracts)
-- Optional third-party provider blocking
-- Kill switch file: `/tmp/dapptility-scan-kill` or `DAPPILITY_KILL_SWITCH` env var
-
-### Tests
+## Tests
 
 ```bash
 cd scanner
@@ -116,62 +81,4 @@ source .venv/bin/activate
 pytest -q
 ```
 
-CI runs the same test suite on push/PR to `main`.
-
-## Console (app)
-
-FastAPI personal console with SQLite persistence, scan orchestration, and report delivery.
-
-### Install and run
-
-```bash
-pip install -e "./scanner[dev]" -e "./app[dev]"
-export DAPPILITY_ADMIN_PASSWORD=your-secure-password
-dapptility-admin
-```
-
-UI: http://localhost:8000/admin (HTTP Basic `admin` / password)
-
-### Features today
-
-- Project and HTTP RPC endpoint CRUD
-- Scan execution from admin
-- Finding review (confirm / reject / false positive)
-- HTML and PDF reports with What we did / did not do
-- Private report links at `/r/{token}`
-- Raw scan JSON retention (30 days, admin-only)
-- Optional ChainList discovery inbox (sales-oriented; retire from primary nav — #38)
-
-```
-app/src/dapptility_app/
-  main.py           FastAPI application
-  database.py       SQLAlchemy models
-  routes/           Admin and private report routes
-  services/         Scan orchestration, reports, persistence
-  templates/        Console UI and report HTML
-```
-
-### Tests
-
-```bash
-cd app && pytest -q
-```
-
-## Next up
-
-See epic [#30](https://github.com/ehsanhajian/dapptility/issues/30) and DoD [#40](https://github.com/ehsanhajian/dapptility/issues/40).
-
-Suggested order: docs polish (#31) → targets (#32) → profiles (#33) → web (#34) + contract (#35) → wire-up (#36) → unified reports (#37) → UI cleanup (#38).
-
-## Git workflow
-
-Repository: https://github.com/ehsanhajian/dapptility
-
-```bash
-git checkout -b feature/my-change
-# ... edit ...
-pytest -q   # from scanner/ and app/ with venv active
-git add -A && git commit -m "..."
-git push -u origin feature/my-change
-gh pr create
-```
+CI runs the same suite on push/PR to `main`.

@@ -41,7 +41,7 @@ htmlcov/
 credentials.json
 secrets/
 
-# Local data (SQLite, reports, raw evidence)
+# Local scan artifacts (if any)
 data/
 !scanner/src/dapptility_scanner/data/
 !scanner/src/dapptility_scanner/data/**

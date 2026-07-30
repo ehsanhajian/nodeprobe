@@ -1,6 +1,6 @@
 # Scanner
 
-Personal multi-scanner engines + CLI: web, multi-chain RPC (EVM / Solana / Substrate / Cosmos), and EVM contracts.
+`dapptility-scan` — website, multi-chain RPC, and EVM contract scanners.
 
 See [docs/FEATURE_LIST.md](../docs/FEATURE_LIST.md).
 

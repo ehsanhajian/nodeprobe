@@ -1,59 +1,46 @@
 # Dapptility
 
-Personal professional scanner for **web**, **multi-chain RPC**, and **EVM smart contracts**.
+CLI scanner for **websites**, **multi-chain RPC**, and **EVM smart contracts**.
 
-Local-first console for projects you operate or are authorized to assess. No public signup, payments, or marketing surface.
+Assess infrastructure you operate or are authorized to test. Local-first — no signup, no cloud account, no payments.
 
-## Overview
+## What it scans
 
-| Module | What it assesses |
+| Command | Target |
 |---|---|
-| **Web** | External HTTP/TLS posture (headers, certificate, security.txt, robots.txt, …) |
-| **RPC** | Public RPC for **EVM**, **Solana**, **Substrate/Polkadot**, and **Cosmos/Tendermint** (auto-detect or `scan` / `solana` / `substrate` / `cosmos`) |
-| **Smart contract** | Read-only EVM on-chain surface (code, proxies, bytecode heuristics, Sourcify/ABI hints) |
+| `dapptility-scan web` | HTTP/TLS posture (headers, certificate, security.txt, robots.txt, …) |
+| `dapptility-scan rpc` / `scan` / `solana` / `substrate` / `cosmos` | Public RPC surface (EVM, Solana, Substrate/Polkadot, Cosmos/Tendermint) |
+| `dapptility-scan contract` | Read-only EVM contract surface (code, proxies, bytecode heuristics, Sourcify) |
 
-Projects hold website, RPC, and contract targets. Findings can be reviewed together and exported as a multi-module HTML/PDF report.
+**Profiles:** `Quick` · `Standard` · `Deep`  
+**Output:** human-readable color report by default; `--json` for machines  
+**Safety:** SSRF / private-IP blocking, request budgets, kill switch, adaptive escalation on Standard/Deep (confirm impact — no exploit payloads)
 
-**Profiles:** `Quick` · `Standard` · `Deep` (aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep)
-
-**Safety:** SSRF / private-IP blocking, per-profile request budgets, kill switch, clear report scope (what was / was not done).
-
-## Status
-
-Personal-tool MVP: web + multi-chain RPC + EVM contracts, console targets, unified findings/reports.
-
-Optional: ChainList RPC inventory sync (off by default — set `DAPPILITY_DISCOVERY_ENABLED=true`).
-
-## Repository layout
-
-```
-docs/           Scope and development docs
-scanner/        Scan engines + CLI
-app/            Personal console, persistence, reports
-deploy/         Caddy config for Docker
-```
-
-## Quick start
-
-### Scanner CLI
+## Install
 
 ```bash
 cd scanner
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+```
 
+## Usage
+
+```bash
 dapptility-scan profiles
 dapptility-scan rules --module all
 
-# Multi-chain RPC (auto-detect or explicit family / command)
-dapptility-scan rpc https://YOUR_RPC                          # auto: evm|solana|substrate|cosmos
+# Website
+dapptility-scan web https://example.com --profile Standard
+
+# Multi-chain RPC (auto-detect or explicit)
+dapptility-scan rpc https://YOUR_RPC
 dapptility-scan scan https://rpc.example.com --profile Standard   # EVM
 dapptility-scan solana https://api.mainnet-beta.solana.com
 dapptility-scan substrate https://rpc.polkadot.io
 dapptility-scan cosmos https://rpc.cosmos.directory:443
-dapptility-scan rpc https://rpc.polkadot.io --family substrate    # same as substrate command
 
-dapptility-scan web https://example.com
+# EVM contract
 dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1
 
 # Machine-readable JSON
@@ -62,42 +49,27 @@ dapptility-scan web https://example.com --json --pretty
 pytest -q
 ```
 
-Exit code `2` means the scan was blocked/aborted (unsafe target, kill switch, unknown RPC family, provider block with `--block-providers`, etc.).
+Exit code `2` means the scan was blocked/aborted (unsafe target, kill switch, unknown RPC family, `--block-providers`, etc.).
 
 See [scanner/README.md](scanner/README.md).
 
-### Console
+## Repository layout
 
-```bash
-pip install -e "./scanner[dev]" -e "./app[dev]"
-export DAPPILITY_ADMIN_PASSWORD=your-secure-password
-dapptility-admin
 ```
-
-Open http://localhost:8000/admin (`admin` / your password).
-
-- Projects → add **web** / **rpc** / **contract** targets → run scans
-- Project findings (filter by module / severity)
-- **Build project report** for a combined assessment
-
-See [app/README.md](app/README.md) and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
-
-### Production (Docker + Caddy)
-
-```bash
-cp .env.example .env   # set admin password and secrets
-docker compose up -d --build
+scanner/   Scan engines + CLI (`dapptility-scan`)
+docs/      Scope and development notes
 ```
-
-See [docs/DOCKER.md](docs/DOCKER.md).
 
 ## Docs
 
 | Doc | Purpose |
 |---|---|
-| [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md) | Product scope (personal tool) |
+| [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md) | Product scope |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Architecture and setup |
-| [docs/DOCKER.md](docs/DOCKER.md) | Production deploy |
+
+## Authorized use
+
+Only scan systems you own or have permission to assess. Misuse against third parties without authorization may be illegal.
 
 ## License
 

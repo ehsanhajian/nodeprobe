@@ -20,7 +20,7 @@ labels: bug
 
 ## Environment
 
-- Component: <!-- scanner / app / admin / reports -->
+- Component: <!-- scanner CLI / rule id -->
 - Version or commit:
 - Scan profile (if applicable): `Quick` / `Standard` / `Deep`
 

@@ -30,22 +30,4 @@ jobs:
         run: |
           dapptility-scan profiles
           dapptility-scan rules | python3 -c "import json,sys; assert len(json.load(sys.stdin)) >= 10"
-
-  app:
-    name: App tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      - name: Install packages
-        run: |
-          pip install -e "./scanner[dev]"
-          pip install -e "./app[dev]"
-
-      - name: Run app tests
-        working-directory: app
-        run: pytest -q
+          dapptility-scan --help
