@@ -1,8 +1,8 @@
 # Nodeprobe
 
-CLI security scanner for **websites**, **multi-chain RPC**, and **EVM smart contracts**.
+**Probe the surfaces that matter — websites, RPC nodes, and EVM contracts — from your terminal.**
 
-Scan infrastructure you operate or are authorized to assess. Local-first — no account, no cloud, no payments.
+Local-first security scanning for infrastructure you operate or are authorized to assess. No account. No cloud. No telemetry. Just a CLI that talks to the target and prints a readable report.
 
 ```bash
 nodeprobe web https://example.com --profile Standard
@@ -54,9 +54,25 @@ Expected surface (not scored as vulnerabilities)
 Tip: use --json for machine-readable output.
 ```
 
-On **Standard** / **Deep**, High and key Medium findings trigger **bounded escalation** — extra read-only probes that confirm impact (nested as `↳ Next:`). Quick skips escalation.
+On **Standard** and **Deep**, interesting findings trigger *bounded escalation* — extra read-only probes that confirm impact, nested under the parent as `↳ Next:`. **Quick** stays fast and skips that step.
+
+---
+
+## What it covers
+
+| Surface | What Nodeprobe looks at |
+|---|---|
+| **Web** | TLS, security headers, `security.txt`, `robots.txt`, server disclosure |
+| **RPC** | EVM, Solana, Substrate/Polkadot, Cosmos — auto-detect or pick a family |
+| **Contracts** | Code presence, proxies, bytecode heuristics, Sourcify verification (read-only) |
+
+Scores, severity counts, and concrete fixes land in a human report by default. Prefer machines? `--json --pretty`.
+
+---
 
 ## Install
+
+Python **3.10+**.
 
 ```bash
 git clone https://github.com/ehsanhajian/nodeprobe.git
@@ -65,45 +81,21 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-Requires Python 3.10+.
-
-## Commands
-
-| Command | What it scans |
-|---|---|
-| `nodeprobe web <url>` | HTTP/TLS: headers, certificate, security.txt, robots.txt, … |
-| `nodeprobe rpc <url>` | Auto-detect RPC family |
-| `nodeprobe scan <url>` | EVM JSON-RPC |
-| `nodeprobe solana <url>` | Solana JSON-RPC |
-| `nodeprobe substrate <url>` | Substrate / Polkadot JSON-RPC |
-| `nodeprobe cosmos <url>` | Cosmos / Tendermint RPC |
-| `nodeprobe contract <addr> --rpc <url> [--chain <id>]` | EVM contract (code, proxies, bytecode, Sourcify) |
-| `nodeprobe profiles` | Profile budgets |
-| `nodeprobe rules [--module all]` | Rule catalog |
-
-### Profiles
-
-| Profile | Intent |
-|---|---|
-| `Quick` | Fast pass, no escalation |
-| `Standard` | Default assessment + escalation |
-| `Deep` | Larger budget, richer follow-ups |
-
-Aliases: `Free`→`Quick`, `Outbound`→`Standard`, `Authorized-Full`→`Deep`.
-
-### Output options
+Then:
 
 ```bash
-nodeprobe web https://example.com                 # human report (default)
-nodeprobe web https://example.com --json --pretty # machine JSON
-nodeprobe web https://example.com --no-color
+nodeprobe --help
+nodeprobe profiles
 ```
 
-Exit code `2` = blocked/aborted (unsafe target, kill switch, unknown RPC family, `--block-providers`, …).
+---
 
-## More examples
+## Quick start
 
 ```bash
+# Website
+nodeprobe web https://example.com --profile Standard
+
 # EVM RPC
 nodeprobe scan https://rpc.example.com --profile Standard
 
@@ -112,17 +104,59 @@ nodeprobe rpc https://api.mainnet-beta.solana.com
 nodeprobe substrate https://rpc.polkadot.io
 nodeprobe cosmos https://rpc.cosmos.directory:443
 
-# Contract (read-only)
+# Contract (read-only eth_call / code fetch)
 nodeprobe contract 0x… --rpc https://rpc.example.com --chain 1 --profile Standard
 ```
 
-## Safety
+### Commands
 
-- SSRF / private-IP / localhost / metadata blocking
-- Per-profile request, RPS, and duration budgets
-- Kill switch: create `/tmp/nodeprobe-kill` or set `NODEPROBE_KILL_SWITCH`
-- Escalation is confirmation-oriented — no exploit or funded-tx payloads
-- EVM chain names from a bundled [Chainlist](https://chainid.network) snapshot
+| Command | Purpose |
+|---|---|
+| `nodeprobe web <url>` | HTTP / TLS surface |
+| `nodeprobe rpc <url>` | RPC with family auto-detect |
+| `nodeprobe scan <url>` | EVM JSON-RPC |
+| `nodeprobe solana <url>` | Solana JSON-RPC |
+| `nodeprobe substrate <url>` | Substrate / Polkadot JSON-RPC |
+| `nodeprobe cosmos <url>` | Cosmos / Tendermint RPC |
+| `nodeprobe contract <addr> --rpc <url> [--chain <id>]` | EVM contract posture |
+| `nodeprobe profiles` | Show profile budgets |
+| `nodeprobe rules [--module all]` | Rule catalog |
+
+### Profiles
+
+| Profile | When to use it |
+|---|---|
+| `Quick` | Fast pass — no escalation |
+| `Standard` | Default assessment + confirmation probes |
+| `Deep` | Larger budget, richer follow-ups |
+
+Legacy aliases still work: `Free` → `Quick`, `Outbound` → `Standard`, `Authorized-Full` → `Deep`.
+
+### Output
+
+```bash
+nodeprobe web https://example.com                 # human report (default)
+nodeprobe web https://example.com --json --pretty # machine JSON
+nodeprobe web https://example.com --no-color      # plain text
+```
+
+Exit code **`2`** means blocked or aborted (unsafe target, kill switch, unknown RPC family, `--block-providers`, …).
+
+---
+
+## Safety by design
+
+Nodeprobe is built to *look*, not to break things.
+
+- Blocks SSRF paths: private IPs, localhost, cloud metadata
+- Enforces per-profile request, RPS, and duration budgets
+- Kill switch: touch `/tmp/nodeprobe-kill` or set `NODEPROBE_KILL_SWITCH`
+- Escalation confirms impact — no exploit payloads, no funded transactions
+- Chain names from a bundled [Chainlist](https://chainid.network) snapshot
+
+**Authorized use only.** Scan systems you own or have permission to assess. Unauthorized scanning may be illegal.
+
+---
 
 ## Development
 
@@ -132,21 +166,17 @@ source .venv/bin/activate
 pytest -q
 ```
 
-Layout:
+Everything lives under `scanner/` — engines, rules, and the `nodeprobe` CLI.
 
-```
-scanner/   engines + CLI (nodeprobe)
-```
+---
 
-## Authorized use
+## Support the project
 
-Only scan systems you own or have permission to assess. Unauthorized scanning may be illegal.
-
-## Donate
-
-If Nodeprobe is useful to you, you can send ETH or ERC-20 tokens on Ethereum to:
+If Nodeprobe helps you, donations are welcome — **ETH or ERC-20 on Ethereum**:
 
 `0xE5B2f8a35c0f12304c5aBDa9477159b53f622cAA`
+
+---
 
 ## License
 
