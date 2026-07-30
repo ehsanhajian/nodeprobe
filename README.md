@@ -1,75 +1,146 @@
 # Dapptility
 
-CLI scanner for **websites**, **multi-chain RPC**, and **EVM smart contracts**.
+CLI security scanner for **websites**, **multi-chain RPC**, and **EVM smart contracts**.
 
-Assess infrastructure you operate or are authorized to test. Local-first — no signup, no cloud account, no payments.
+Scan infrastructure you operate or are authorized to assess. Local-first — no account, no cloud, no payments.
 
-## What it scans
+```bash
+dapptility-scan web https://example.com --profile Standard
+```
 
-| Command | Target |
-|---|---|
-| `dapptility-scan web` | HTTP/TLS posture (headers, certificate, security.txt, robots.txt, …) |
-| `dapptility-scan rpc` / `scan` / `solana` / `substrate` / `cosmos` | Public RPC surface (EVM, Solana, Substrate/Polkadot, Cosmos/Tendermint) |
-| `dapptility-scan contract` | Read-only EVM contract surface (code, proxies, bytecode heuristics, Sourcify) |
+```
+Dapptility scan report
+========================================================================
+Target:  https://example.com
+Profile:  Standard
+Score:  66/100
+Duration:  4.1s · 6 request(s)
+Status:  completed
 
-**Profiles:** `Quick` · `Standard` · `Deep`  
-**Output:** human-readable color report by default; `--json` for machines  
-**Safety:** SSRF / private-IP blocking, request budgets, kill switch, adaptive escalation on Standard/Deep (confirm impact — no exploit payloads)
+Summary
+------------------------------------------------------------------------
+  Critical 0  High 0  Medium 2  Low 0  Info 1  Expected-surface 1
+
+Findings (5)
+------------------------------------------------------------------------
+1. [Medium] Missing HSTS header
+   WEB-HDR-001 · HTTP Security · Confirmed · escalated → WEB-HDR-001-CONFIRM
+   Response from https://example.com does not include HSTS.
+   Impact: Missing headers increase risk of clickjacking, XSS amplification, and downgrade attacks.
+   Fix:    Set HSTS (and related browser security headers) at the edge.
+
+   ↳ 2. [Info] Next: HTTP redirects to HTTPS
+     WEB-HDR-001-CONFIRM · Escalation · Confirmed · from WEB-HDR-001
+      Probed http://example.com/ → https://example.com/.
+      Redirect exists, but HSTS is still missing (first-visit / MITM risk).
+
+3. [Medium] Missing Content-Security-Policy header
+   WEB-HDR-001 · HTTP Security · Confirmed · escalated → WEB-HDR-001-NEXT
+   Response from https://example.com does not include Content-Security-Policy.
+
+   ↳ 4. [Medium] Next: no CSP and no frame controls
+     WEB-HDR-001-NEXT · Escalation · Confirmed · from WEB-HDR-001
+      Neither CSP frame-ancestors nor X-Frame-Options is set.
+
+5. [Info] server header discloses technology
+   WEB-HDR-002 · HTTP Security · Confirmed
+   Response includes `server: cloudflare`.
+
+Expected surface (not scored as vulnerabilities)
+------------------------------------------------------------------------
+  · Website TLS certificate validation: TLS certificate is valid for this hostname.
+
+========================================================================
+Tip: use --json for machine-readable output.
+```
+
+On **Standard** / **Deep**, High and key Medium findings trigger **bounded escalation** — extra read-only probes that confirm impact (nested as `↳ Next:`). Quick skips escalation.
 
 ## Install
 
 ```bash
-cd scanner
+git clone https://github.com/ehsanhajian/dapptility.git
+cd dapptility/scanner
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-## Usage
+Requires Python 3.10+.
+
+## Commands
+
+| Command | What it scans |
+|---|---|
+| `dapptility-scan web <url>` | HTTP/TLS: headers, certificate, security.txt, robots.txt, … |
+| `dapptility-scan rpc <url>` | Auto-detect RPC family |
+| `dapptility-scan scan <url>` | EVM JSON-RPC |
+| `dapptility-scan solana <url>` | Solana JSON-RPC |
+| `dapptility-scan substrate <url>` | Substrate / Polkadot JSON-RPC |
+| `dapptility-scan cosmos <url>` | Cosmos / Tendermint RPC |
+| `dapptility-scan contract <addr> --rpc <url> [--chain <id>]` | EVM contract (code, proxies, bytecode, Sourcify) |
+| `dapptility-scan profiles` | Profile budgets |
+| `dapptility-scan rules [--module all]` | Rule catalog |
+
+### Profiles
+
+| Profile | Intent |
+|---|---|
+| `Quick` | Fast pass, no escalation |
+| `Standard` | Default assessment + escalation |
+| `Deep` | Larger budget, richer follow-ups |
+
+Aliases: `Free`→`Quick`, `Outbound`→`Standard`, `Authorized-Full`→`Deep`.
+
+### Output options
 
 ```bash
-dapptility-scan profiles
-dapptility-scan rules --module all
+dapptility-scan web https://example.com                 # human report (default)
+dapptility-scan web https://example.com --json --pretty # machine JSON
+dapptility-scan web https://example.com --no-color
+```
 
-# Website
-dapptility-scan web https://example.com --profile Standard
+Exit code `2` = blocked/aborted (unsafe target, kill switch, unknown RPC family, `--block-providers`, …).
 
-# Multi-chain RPC (auto-detect or explicit)
-dapptility-scan rpc https://YOUR_RPC
-dapptility-scan scan https://rpc.example.com --profile Standard   # EVM
-dapptility-scan solana https://api.mainnet-beta.solana.com
+## More examples
+
+```bash
+# EVM RPC
+dapptility-scan scan https://rpc.example.com --profile Standard
+
+# Auto-detect Solana / Substrate / Cosmos
+dapptility-scan rpc https://api.mainnet-beta.solana.com
 dapptility-scan substrate https://rpc.polkadot.io
 dapptility-scan cosmos https://rpc.cosmos.directory:443
 
-# EVM contract
-dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1
+# Contract (read-only)
+dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1 --profile Standard
+```
 
-# Machine-readable JSON
-dapptility-scan web https://example.com --json --pretty
+## Safety
 
+- SSRF / private-IP / localhost / metadata blocking
+- Per-profile request, RPS, and duration budgets
+- Kill switch: create `/tmp/dapptility-scan-kill` or set `DAPPILITY_KILL_SWITCH`
+- Escalation is confirmation-oriented — no exploit or funded-tx payloads
+- EVM chain names from a bundled [Chainlist](https://chainid.network) snapshot
+
+## Development
+
+```bash
+cd scanner
+source .venv/bin/activate
 pytest -q
 ```
 
-Exit code `2` means the scan was blocked/aborted (unsafe target, kill switch, unknown RPC family, `--block-providers`, etc.).
-
-See [scanner/README.md](scanner/README.md).
-
-## Repository layout
+Layout:
 
 ```
-scanner/   Scan engines + CLI (`dapptility-scan`)
-docs/      Scope and development notes
+scanner/   engines + CLI (dapptility-scan)
 ```
-
-## Docs
-
-| Doc | Purpose |
-|---|---|
-| [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md) | Product scope |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Architecture and setup |
 
 ## Authorized use
 
-Only scan systems you own or have permission to assess. Misuse against third parties without authorization may be illegal.
+Only scan systems you own or have permission to assess. Unauthorized scanning may be illegal.
 
 ## License
 
