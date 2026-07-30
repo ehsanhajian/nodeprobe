@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dapptility-scanner"
+name = "nodeprobe"
 version = "0.1.0"
-description = "EVM JSON-RPC security scanner for Dapptility"
+description = "CLI scanner for websites, multi-chain RPC, and EVM smart contracts"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -19,13 +19,13 @@ dev = [
 ]
 
 [project.scripts]
-dapptility-scan = "dapptility_scanner.cli:main"
+nodeprobe = "nodeprobe.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-dapptility_scanner = ["data/*.json"]
+nodeprobe = ["data/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -5,18 +5,18 @@ from typing import Any
 
 import httpx
 
-from dapptility_scanner.engine import ScannerEngine
-from dapptility_scanner.escalation import run_evm_escalations
-from dapptility_scanner.models import (
+from nodeprobe.engine import ScannerEngine
+from nodeprobe.escalation import run_evm_escalations
+from nodeprobe.models import (
     CheckKind,
     Confidence,
     Finding,
     ScanProfile,
     Severity,
 )
-from dapptility_scanner.profiles import get_profile
-from dapptility_scanner.rpc import RpcClient
-from dapptility_scanner.safety import SafeTarget
+from nodeprobe.profiles import get_profile
+from nodeprobe.rpc import RpcClient
+from nodeprobe.safety import SafeTarget
 
 
 def make_transport(handler) -> httpx.MockTransport:

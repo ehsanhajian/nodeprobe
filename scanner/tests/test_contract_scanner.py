@@ -3,12 +3,12 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from dapptility_scanner import killswitch
-from dapptility_scanner.cli import main
-from dapptility_scanner.contract.bytecode import analyze_bytecode, extract_selectors
-from dapptility_scanner.contract.proxy import detect_eip1167, detect_proxies_from_slots
-from dapptility_scanner.contract_engine import ContractScannerEngine
-from dapptility_scanner.models import ScanProfile, ScanResult
+from nodeprobe import killswitch
+from nodeprobe.cli import main
+from nodeprobe.contract.bytecode import analyze_bytecode, extract_selectors
+from nodeprobe.contract.proxy import detect_eip1167, detect_proxies_from_slots
+from nodeprobe.contract_engine import ContractScannerEngine
+from nodeprobe.models import ScanProfile, ScanResult
 
 
 @pytest.fixture(autouse=True)
@@ -101,7 +101,7 @@ def test_contract_engine_proxy(monkeypatch):
     client = httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=False)
 
     monkeypatch.setattr(
-        "dapptility_scanner.contract_engine.fetch_sourcify",
+        "nodeprobe.contract_engine.fetch_sourcify",
         lambda *a, **k: type(
             "M",
             (),
@@ -158,7 +158,7 @@ def test_cli_contract_rules(capsys, monkeypatch):
                 errors=[],
             )
 
-    monkeypatch.setattr("dapptility_scanner.cli.ContractScannerEngine", FakeEngine)
+    monkeypatch.setattr("nodeprobe.cli.ContractScannerEngine", FakeEngine)
     assert (
         main(
             [
@@ -173,7 +173,7 @@ def test_cli_contract_rules(capsys, monkeypatch):
         == 0
     )
     out = capsys.readouterr().out
-    assert "Dapptility scan report" in out
+    assert "Nodeprobe scan report" in out
     assert "Ethereum Mainnet" in out
 
     assert main(["rules", "--module", "contract"]) == 0

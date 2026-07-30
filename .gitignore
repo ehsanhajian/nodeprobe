@@ -43,5 +43,5 @@ secrets/
 
 # Local scan artifacts (if any)
 data/
-!scanner/src/dapptility_scanner/data/
-!scanner/src/dapptility_scanner/data/**
+!scanner/src/nodeprobe/data/
+!scanner/src/nodeprobe/data/**

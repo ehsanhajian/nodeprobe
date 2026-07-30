@@ -3,10 +3,10 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from dapptility_scanner import killswitch
-from dapptility_scanner.cli import main
-from dapptility_scanner.models import ScanProfile, ScanResult
-from dapptility_scanner.web_engine import WebScannerEngine
+from nodeprobe import killswitch
+from nodeprobe.cli import main
+from nodeprobe.models import ScanProfile, ScanResult
+from nodeprobe.web_engine import WebScannerEngine
 
 
 @pytest.fixture(autouse=True)
@@ -82,10 +82,10 @@ def test_cli_web_and_rules(capsys, monkeypatch):
                 errors=[],
             )
 
-    monkeypatch.setattr("dapptility_scanner.cli.WebScannerEngine", FakeEngine)
+    monkeypatch.setattr("nodeprobe.cli.WebScannerEngine", FakeEngine)
     assert main(["web", "https://example.com"]) == 0
     out = capsys.readouterr().out
-    assert "Dapptility scan report" in out
+    assert "Nodeprobe scan report" in out
     assert "https://example.com" in out
     assert "Score:" in out
 

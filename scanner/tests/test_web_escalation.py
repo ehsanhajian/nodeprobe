@@ -3,18 +3,18 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from dapptility_scanner import killswitch
-from dapptility_scanner.http_client import BudgetedHttpClient
-from dapptility_scanner.models import (
+from nodeprobe import killswitch
+from nodeprobe.http_client import BudgetedHttpClient
+from nodeprobe.models import (
     CheckKind,
     Confidence,
     Finding,
     Severity,
 )
-from dapptility_scanner.profiles import get_profile
-from dapptility_scanner.safety import SafeTarget
-from dapptility_scanner.escalation_web import run_web_escalations
-from dapptility_scanner.web_engine import WebScannerEngine
+from nodeprobe.profiles import get_profile
+from nodeprobe.safety import SafeTarget
+from nodeprobe.escalation_web import run_web_escalations
+from nodeprobe.web_engine import WebScannerEngine
 
 
 @pytest.fixture(autouse=True)

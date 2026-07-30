@@ -5,18 +5,18 @@ import json
 import httpx
 import pytest
 
-from dapptility_scanner import killswitch
-from dapptility_scanner.contract_engine import ContractScannerEngine
-from dapptility_scanner.escalation_contract import run_contract_escalations
-from dapptility_scanner.models import (
+from nodeprobe import killswitch
+from nodeprobe.contract_engine import ContractScannerEngine
+from nodeprobe.escalation_contract import run_contract_escalations
+from nodeprobe.models import (
     CheckKind,
     Confidence,
     Finding,
     Severity,
 )
-from dapptility_scanner.profiles import get_profile
-from dapptility_scanner.rpc import RpcClient
-from dapptility_scanner.safety import SafeTarget
+from nodeprobe.profiles import get_profile
+from nodeprobe.rpc import RpcClient
+from nodeprobe.safety import SafeTarget
 
 
 @pytest.fixture(autouse=True)
@@ -73,7 +73,7 @@ def test_contract_proxy_escalation_fetches_impl(monkeypatch):
 
     client = httpx.Client(transport=httpx.MockTransport(handler), follow_redirects=False)
     monkeypatch.setattr(
-        "dapptility_scanner.contract_engine.fetch_sourcify",
+        "nodeprobe.contract_engine.fetch_sourcify",
         lambda *a, **k: type(
             "M",
             (),

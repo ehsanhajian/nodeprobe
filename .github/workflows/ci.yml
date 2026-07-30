@@ -28,6 +28,6 @@ jobs:
       - name: Verify scanner CLI
         working-directory: scanner
         run: |
-          dapptility-scan profiles
-          dapptility-scan rules | python3 -c "import json,sys; assert len(json.load(sys.stdin)) >= 10"
-          dapptility-scan --help
+          nodeprobe profiles
+          nodeprobe rules | python3 -c "import json,sys; assert len(json.load(sys.stdin)) >= 10"
+          nodeprobe --help

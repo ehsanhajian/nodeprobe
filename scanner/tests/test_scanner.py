@@ -6,15 +6,15 @@ from typing import Any
 import httpx
 import pytest
 
-from dapptility_scanner import killswitch
-from dapptility_scanner.chains import resolve_chain
-from dapptility_scanner.engine import ScannerEngine
-from dapptility_scanner.profiles import get_profile
-from dapptility_scanner.providers import detect_provider
-from dapptility_scanner.safety import UnsafeTargetError, mask_credentials, validate_target
-from dapptility_scanner.scoring import compute_score
-from dapptility_scanner.models import CheckKind, Confidence, Finding, Severity
-from dapptility_scanner.cli import main
+from nodeprobe import killswitch
+from nodeprobe.chains import resolve_chain
+from nodeprobe.engine import ScannerEngine
+from nodeprobe.profiles import get_profile
+from nodeprobe.providers import detect_provider
+from nodeprobe.safety import UnsafeTargetError, mask_credentials, validate_target
+from nodeprobe.scoring import compute_score
+from nodeprobe.models import CheckKind, Confidence, Finding, Severity
+from nodeprobe.cli import main
 
 
 def make_transport(handler) -> httpx.MockTransport:
@@ -63,7 +63,7 @@ def test_validate_blocks_localhost():
 
 
 def test_validate_blocks_private_hostname_resolution(monkeypatch):
-    import dapptility_scanner.safety as safety
+    import nodeprobe.safety as safety
 
     def fake_getaddrinfo(host, *args, **kwargs):
         return [(None, None, None, None, ("10.0.0.5", 0))]
@@ -246,8 +246,8 @@ def test_cli_rules(capsys):
 
 
 def test_human_report_format():
-    from dapptility_scanner.models import ScanProfile, ScanResult
-    from dapptility_scanner.report import format_human_report
+    from nodeprobe.models import ScanProfile, ScanResult
+    from nodeprobe.report import format_human_report
 
     result = ScanResult(
         scanner_version="0.1.0",
@@ -279,7 +279,7 @@ def test_human_report_format():
         errors=[],
     )
     text = format_human_report(result, color=False)
-    assert "Dapptility scan report" in text
+    assert "Nodeprobe scan report" in text
     assert "Score:" in text and "54/100" in text
     assert "[Medium] Missing HSTS header" in text
     assert "Fix:" in text and "Set Strict-Transport-Security." in text
@@ -292,7 +292,7 @@ def test_human_report_format():
 
 
 def test_cli_scan_json_flag(capsys, monkeypatch):
-    from dapptility_scanner.models import ScanProfile, ScanResult
+    from nodeprobe.models import ScanProfile, ScanResult
 
     class FakeEngine:
         def __init__(self, *args, **kwargs):
@@ -316,10 +316,10 @@ def test_cli_scan_json_flag(capsys, monkeypatch):
                 errors=[],
             )
 
-    monkeypatch.setattr("dapptility_scanner.cli.ScannerEngine", FakeEngine)
+    monkeypatch.setattr("nodeprobe.cli.ScannerEngine", FakeEngine)
     assert main(["scan", "https://rpc.example"]) == 0
     human = capsys.readouterr().out
-    assert "Dapptility scan report" in human
+    assert "Nodeprobe scan report" in human
 
     assert main(["scan", "https://rpc.example", "--json", "--pretty"]) == 0
     payload = json.loads(capsys.readouterr().out)

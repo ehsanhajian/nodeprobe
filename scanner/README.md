@@ -1,3 +1,3 @@
 # Scanner package
 
-Installable package for `dapptility-scan`. See the [root README](../README.md) for usage.
+Installable package for `nodeprobe`. See the [root README](../README.md) for usage.

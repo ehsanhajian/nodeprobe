@@ -5,11 +5,11 @@ from typing import Any
 
 import httpx
 
-from dapptility_scanner.cli import main
-from dapptility_scanner.multichain import MultichainRpcEngine
-from dapptility_scanner.multichain.cosmos_engine import CosmosScannerEngine
-from dapptility_scanner.multichain.solana_engine import SolanaScannerEngine
-from dapptility_scanner.multichain.substrate_engine import SubstrateScannerEngine
+from nodeprobe.cli import main
+from nodeprobe.multichain import MultichainRpcEngine
+from nodeprobe.multichain.cosmos_engine import CosmosScannerEngine
+from nodeprobe.multichain.solana_engine import SolanaScannerEngine
+from nodeprobe.multichain.substrate_engine import SubstrateScannerEngine
 
 
 def make_transport(handler) -> httpx.MockTransport:

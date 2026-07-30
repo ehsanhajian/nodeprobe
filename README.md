@@ -1,15 +1,15 @@
-# Dapptility
+# Nodeprobe
 
 CLI security scanner for **websites**, **multi-chain RPC**, and **EVM smart contracts**.
 
 Scan infrastructure you operate or are authorized to assess. Local-first — no account, no cloud, no payments.
 
 ```bash
-dapptility-scan web https://example.com --profile Standard
+nodeprobe web https://example.com --profile Standard
 ```
 
 ```
-Dapptility scan report
+Nodeprobe scan report
 ========================================================================
 Target:  https://example.com
 Profile:  Standard
@@ -59,8 +59,8 @@ On **Standard** / **Deep**, High and key Medium findings trigger **bounded escal
 ## Install
 
 ```bash
-git clone https://github.com/ehsanhajian/dapptility.git
-cd dapptility/scanner
+git clone https://github.com/ehsanhajian/nodeprobe.git
+cd nodeprobe/scanner
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
@@ -71,15 +71,15 @@ Requires Python 3.10+.
 
 | Command | What it scans |
 |---|---|
-| `dapptility-scan web <url>` | HTTP/TLS: headers, certificate, security.txt, robots.txt, … |
-| `dapptility-scan rpc <url>` | Auto-detect RPC family |
-| `dapptility-scan scan <url>` | EVM JSON-RPC |
-| `dapptility-scan solana <url>` | Solana JSON-RPC |
-| `dapptility-scan substrate <url>` | Substrate / Polkadot JSON-RPC |
-| `dapptility-scan cosmos <url>` | Cosmos / Tendermint RPC |
-| `dapptility-scan contract <addr> --rpc <url> [--chain <id>]` | EVM contract (code, proxies, bytecode, Sourcify) |
-| `dapptility-scan profiles` | Profile budgets |
-| `dapptility-scan rules [--module all]` | Rule catalog |
+| `nodeprobe web <url>` | HTTP/TLS: headers, certificate, security.txt, robots.txt, … |
+| `nodeprobe rpc <url>` | Auto-detect RPC family |
+| `nodeprobe scan <url>` | EVM JSON-RPC |
+| `nodeprobe solana <url>` | Solana JSON-RPC |
+| `nodeprobe substrate <url>` | Substrate / Polkadot JSON-RPC |
+| `nodeprobe cosmos <url>` | Cosmos / Tendermint RPC |
+| `nodeprobe contract <addr> --rpc <url> [--chain <id>]` | EVM contract (code, proxies, bytecode, Sourcify) |
+| `nodeprobe profiles` | Profile budgets |
+| `nodeprobe rules [--module all]` | Rule catalog |
 
 ### Profiles
 
@@ -94,9 +94,9 @@ Aliases: `Free`→`Quick`, `Outbound`→`Standard`, `Authorized-Full`→`Deep`.
 ### Output options
 
 ```bash
-dapptility-scan web https://example.com                 # human report (default)
-dapptility-scan web https://example.com --json --pretty # machine JSON
-dapptility-scan web https://example.com --no-color
+nodeprobe web https://example.com                 # human report (default)
+nodeprobe web https://example.com --json --pretty # machine JSON
+nodeprobe web https://example.com --no-color
 ```
 
 Exit code `2` = blocked/aborted (unsafe target, kill switch, unknown RPC family, `--block-providers`, …).
@@ -105,22 +105,22 @@ Exit code `2` = blocked/aborted (unsafe target, kill switch, unknown RPC family,
 
 ```bash
 # EVM RPC
-dapptility-scan scan https://rpc.example.com --profile Standard
+nodeprobe scan https://rpc.example.com --profile Standard
 
 # Auto-detect Solana / Substrate / Cosmos
-dapptility-scan rpc https://api.mainnet-beta.solana.com
-dapptility-scan substrate https://rpc.polkadot.io
-dapptility-scan cosmos https://rpc.cosmos.directory:443
+nodeprobe rpc https://api.mainnet-beta.solana.com
+nodeprobe substrate https://rpc.polkadot.io
+nodeprobe cosmos https://rpc.cosmos.directory:443
 
 # Contract (read-only)
-dapptility-scan contract 0x… --rpc https://rpc.example.com --chain 1 --profile Standard
+nodeprobe contract 0x… --rpc https://rpc.example.com --chain 1 --profile Standard
 ```
 
 ## Safety
 
 - SSRF / private-IP / localhost / metadata blocking
 - Per-profile request, RPS, and duration budgets
-- Kill switch: create `/tmp/dapptility-scan-kill` or set `DAPPILITY_KILL_SWITCH`
+- Kill switch: create `/tmp/nodeprobe-kill` or set `NODEPROBE_KILL_SWITCH`
 - Escalation is confirmation-oriented — no exploit or funded-tx payloads
 - EVM chain names from a bundled [Chainlist](https://chainid.network) snapshot
 
@@ -135,7 +135,7 @@ pytest -q
 Layout:
 
 ```
-scanner/   engines + CLI (dapptility-scan)
+scanner/   engines + CLI (nodeprobe)
 ```
 
 ## Authorized use
