@@ -142,6 +142,12 @@ scanner/   engines + CLI (nodeprobe)
 
 Only scan systems you own or have permission to assess. Unauthorized scanning may be illegal.
 
+## Donate
+
+If Nodeprobe is useful to you, you can send ETH or ERC-20 tokens on Ethereum to:
+
+`0xE5B2f8a35c0f12304c5aBDa9477159b53f622cAA`
+
 ## License
 
 Proprietary — all rights reserved unless otherwise stated.
