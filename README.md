@@ -62,9 +62,27 @@ On **Standard** and **Deep**, interesting findings trigger *bounded escalation* 
 
 | Surface | What Nodeprobe looks at |
 |---|---|
-| **Web** | TLS, security headers, `security.txt`, `robots.txt`, server disclosure |
-| **RPC** | EVM, Solana, Substrate/Polkadot, Cosmos — auto-detect or pick a family |
+| **Web** | TLS, security headers (presence + HSTS/CSP policy grading), `security.txt`, `robots.txt`, server disclosure |
+| **RPC** | EVM, Solana, Substrate/Polkadot, Cosmos — auto-detect or pick a family; sensitive-method catalogs and Deep method inventories |
 | **Contracts** | Code presence, proxies, bytecode heuristics, Sourcify verification (read-only) |
+
+### Web header grading
+
+Missing headers still matter — and when HSTS or CSP **is** present, Nodeprobe grades the policy:
+
+- **HSTS** — short / missing `max-age`, missing `includeSubDomains`, `preload` without a preload-ready policy
+- **CSP** — `unsafe-inline` / `unsafe-eval`, overly broad sources (`*` / scheme-only), `data:` scripts, missing `frame-ancestors`
+
+Rules: `WEB-HDR-003` (weak HSTS), `WEB-HDR-004` (weak CSP). On **Standard** / **Deep**, weak policies can escalate like missing ones.
+
+### Solana / Cosmos method discovery
+
+Sensitive methods are probed by presence (no expensive payloads), gated by profile:
+
+- **Solana** — admin / costly surface (`validatorExit`, `setLogFilter`, `requestAirdrop`, `getProgramAccounts`, …) plus Deep inventory (`SOL-DISC-003`)
+- **Cosmos** — unsafe Tendermint APIs (dial / flush / CPU & heap profilers) and disclosure methods (`dump_consensus_state`, …) plus Deep inventory (`COS-DISC-003`)
+
+Sibling confirmation on **Standard** / **Deep** follows the same pattern as EVM namespace escalation.
 
 Scores, severity counts, and concrete fixes land in a human report by default. Prefer machines? `--json --pretty`.
 

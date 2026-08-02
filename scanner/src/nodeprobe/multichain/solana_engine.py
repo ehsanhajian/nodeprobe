@@ -23,17 +23,92 @@ from nodeprobe.safety import UnsafeTargetError, mask_credentials, validate_targe
 from nodeprobe.scoring import compute_score
 
 # Presence probes — not executed with expensive payloads.
+# (method, severity, score_impact, remediation, min_profile)
 _SENSITIVE_METHODS = (
-    ("validatorExit", "Critical", 35, "Node exit control should never be exposed publicly."),
-    ("setLogFilter", "High", 18, "Log filter control indicates privileged RPC surface."),
-    ("requestAirdrop", "Medium", 8, "Airdrop method on a public RPC is unexpected for mainnet."),
+    (
+        "validatorExit",
+        "Critical",
+        35,
+        "Node exit control should never be exposed publicly.",
+        ScanProfile.STANDARD,
+    ),
+    (
+        "setLogFilter",
+        "High",
+        18,
+        "Log filter control indicates privileged RPC surface.",
+        ScanProfile.STANDARD,
+    ),
+    (
+        "requestAirdrop",
+        "Medium",
+        8,
+        "Airdrop method on a public RPC is unexpected for mainnet.",
+        ScanProfile.QUICK,
+    ),
+    (
+        "getProgramAccounts",
+        "Medium",
+        10,
+        "Unbounded getProgramAccounts enables expensive enumeration / DoS.",
+        ScanProfile.STANDARD,
+    ),
+    (
+        "getLargestAccounts",
+        "Low",
+        4,
+        "Largest-account listings aid wealth and whale reconnaissance.",
+        ScanProfile.STANDARD,
+    ),
+    (
+        "getTokenLargestAccounts",
+        "Low",
+        4,
+        "Token whale listings aid reconnaissance on public RPCs.",
+        ScanProfile.DEEP,
+    ),
+    (
+        "getLeaderSchedule",
+        "Low",
+        3,
+        "Leader schedules map validator topology beyond normal tip queries.",
+        ScanProfile.DEEP,
+    ),
 )
+
+# Common public methods — Deep inventory only (expected surface, not scored as vulns).
+_INVENTORY_METHODS = (
+    "getHealth",
+    "getVersion",
+    "getSlot",
+    "getBalance",
+    "getAccountInfo",
+    "getLatestBlockhash",
+    "getBlockHeight",
+    "getTransaction",
+    "sendTransaction",
+    "simulateTransaction",
+    "getSignatureStatuses",
+    "getMultipleAccounts",
+)
+
+_PROFILE_RANK = {
+    ScanProfile.QUICK: 0,
+    ScanProfile.STANDARD: 1,
+    ScanProfile.DEEP: 2,
+}
+
+
+def _profile_at_least(current: ScanProfile, minimum: ScanProfile) -> bool:
+    return _PROFILE_RANK[current] >= _PROFILE_RANK[minimum]
+
 
 SOLANA_RULE_CATALOG = [
     {"rule_id": "SOL-IDENT-001", "title": "Solana health / version", "category": "Identity"},
     {"rule_id": "SOL-IDENT-002", "title": "Cluster slot / epoch", "category": "Identity"},
     {"rule_id": "SOL-DISC-001", "title": "getIdentity disclosure", "category": "Disclosure"},
     {"rule_id": "SOL-DISC-002", "title": "getClusterNodes peer listing", "category": "Disclosure"},
+    {"rule_id": "SOL-DISC-003", "title": "Public method inventory", "category": "Disclosure"},
     {"rule_id": "SOL-NS-001", "title": "Sensitive Solana method exposure", "category": "Namespaces"},
     {"rule_id": "MC-TLS-001", "title": "TLS certificate validation", "category": "TLS Security"},
 ]
@@ -185,11 +260,8 @@ class SolanaScannerEngine:
                             )
                         )
 
-                for method, sev_name, impact, remediation in _SENSITIVE_METHODS:
-                    if (
-                        method in {"validatorExit", "setLogFilter"}
-                        and self.limits.name == ScanProfile.QUICK
-                    ):
+                for method, sev_name, impact, remediation, min_profile in _SENSITIVE_METHODS:
+                    if not _profile_at_least(self.limits.name, min_profile):
                         continue
                     available, detail = client.method_available(method)
                     if available:
@@ -203,10 +275,42 @@ class SolanaScannerEngine:
                                 description=f"RPC accepts or recognizes `{method}`.",
                                 evidence={"method": method, "detail": _trim(detail)},
                                 impact=remediation,
-                                remediation="Disable privileged Solana admin methods on public endpoints.",
+                                remediation=(
+                                    "Disable privileged or expensive Solana methods on public "
+                                    "endpoints; allowlist only required read methods."
+                                ),
                                 score_impact=impact,
                             )
                         )
+
+                if self.limits.name == ScanProfile.DEEP:
+                    exposed: list[str] = []
+                    missing: list[str] = []
+                    for method in _INVENTORY_METHODS:
+                        available, _detail = client.method_available(method)
+                        if available:
+                            exposed.append(method)
+                        else:
+                            missing.append(method)
+                    produced.append(
+                        finding(
+                            rule_id="SOL-DISC-003",
+                            title="Public Solana method inventory",
+                            category="Disclosure",
+                            severity=Severity.INFO,
+                            kind=CheckKind.EXPECTED_SURFACE,
+                            description=(
+                                f"Probed {len(_INVENTORY_METHODS)} common public methods: "
+                                f"{len(exposed)} available, {len(missing)} missing."
+                            ),
+                            evidence={
+                                "exposed": exposed,
+                                "missing": missing,
+                                "probed": list(_INVENTORY_METHODS),
+                            },
+                            score_impact=0,
+                        )
+                    )
 
                 findings_so_far, _ = split_findings(produced)
                 produced.extend(
