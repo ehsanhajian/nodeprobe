@@ -300,6 +300,7 @@ def run_web_escalations(
 
     budget = max_escalations_for(profile)
     produced: list[Finding] = []
+    seen_grade_rules: set[str] = set()
 
     def _take(parent: Finding, kids: list[Finding]) -> None:
         nonlocal produced
@@ -329,10 +330,37 @@ def run_web_escalations(
                     _take(parent, _escalate_missing_hsts(client, context, parent))
                 except Exception:  # noqa: BLE001
                     pass
+        elif parent.rule_id == "WEB-HDR-003" and parent.severity in {
+            Severity.MEDIUM,
+            Severity.HIGH,
+            Severity.CRITICAL,
+        }:
+            if "WEB-HDR-003" in seen_grade_rules:
+                continue
+            seen_grade_rules.add("WEB-HDR-003")
+            # Weak HSTS still benefits from HTTP→HTTPS confirmation.
+            try:
+                _take(parent, _escalate_missing_hsts(client, context, parent))
+            except Exception:  # noqa: BLE001
+                pass
         elif parent.rule_id == "WEB-HDR-001" and (
             header == "content-security-policy" or "content-security-policy" in title
         ):
             if parent.severity in {Severity.MEDIUM, Severity.HIGH, Severity.CRITICAL}:
+                try:
+                    _take(parent, _escalate_missing_csp(client, context, parent))
+                except Exception:  # noqa: BLE001
+                    pass
+        elif parent.rule_id == "WEB-HDR-004" and parent.severity in {
+            Severity.MEDIUM,
+            Severity.HIGH,
+            Severity.CRITICAL,
+        }:
+            if "WEB-HDR-004" in seen_grade_rules:
+                continue
+            issue = str((parent.evidence or {}).get("issue") or "")
+            if issue in {"unsafe_inline", "unsafe_eval", "missing_frame_ancestors", "wildcard_source"}:
+                seen_grade_rules.add("WEB-HDR-004")
                 try:
                     _take(parent, _escalate_missing_csp(client, context, parent))
                 except Exception:  # noqa: BLE001

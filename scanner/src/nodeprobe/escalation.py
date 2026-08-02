@@ -679,6 +679,10 @@ SOLANA_SIBLINGS = {
     "validatorExit": ("setLogFilter",),
     "setLogFilter": ("validatorExit",),
     "requestAirdrop": ("getIdentity",),
+    "getProgramAccounts": ("getLargestAccounts", "getMultipleAccounts"),
+    "getLargestAccounts": ("getTokenLargestAccounts", "getProgramAccounts"),
+    "getTokenLargestAccounts": ("getLargestAccounts",),
+    "getLeaderSchedule": ("getClusterNodes", "getIdentity"),
 }
 
 SUBSTRATE_SIBLINGS = {
@@ -692,5 +696,11 @@ SUBSTRATE_SIBLINGS = {
 COSMOS_SIBLINGS = {
     "dial_seeds": ("dial_peers",),
     "dial_peers": ("dial_seeds",),
-    "unsafe_flush_mempool": ("dial_peers", "dial_seeds"),
+    "unsafe_flush_mempool": ("dial_peers", "dial_seeds", "unsafe_start_cpu_profiler"),
+    "unsafe_start_cpu_profiler": ("unsafe_stop_cpu_profiler", "unsafe_write_heap_profile"),
+    "unsafe_stop_cpu_profiler": ("unsafe_start_cpu_profiler",),
+    "unsafe_write_heap_profile": ("unsafe_start_cpu_profiler", "unsafe_flush_mempool"),
+    "dump_consensus_state": ("consensus_state", "net_info"),
+    "consensus_state": ("dump_consensus_state",),
+    "genesis": ("consensus_state",),
 }

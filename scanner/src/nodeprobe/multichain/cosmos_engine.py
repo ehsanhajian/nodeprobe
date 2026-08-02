@@ -24,15 +24,56 @@ from nodeprobe.rpc import BudgetExceeded, RpcClient
 from nodeprobe.safety import UnsafeTargetError, mask_credentials, validate_target
 from nodeprobe.scoring import compute_score
 
+# (method, severity, score_impact, min_profile)
 _UNSAFE_JSON_RPC = (
-    ("dial_seeds", "High", 18),
-    ("dial_peers", "High", 18),
-    ("unsafe_flush_mempool", "Critical", 30),
+    ("dial_seeds", "High", 18, ScanProfile.QUICK),
+    ("dial_peers", "High", 18, ScanProfile.QUICK),
+    ("unsafe_flush_mempool", "Critical", 30, ScanProfile.STANDARD),
+    ("unsafe_start_cpu_profiler", "Critical", 28, ScanProfile.STANDARD),
+    ("unsafe_stop_cpu_profiler", "High", 16, ScanProfile.STANDARD),
+    ("unsafe_write_heap_profile", "High", 16, ScanProfile.STANDARD),
 )
+
+# Heavy / recon methods — Standard+ presence probes (not full dumps).
+_DISCLOSURE_METHODS = (
+    ("dump_consensus_state", "Medium", 10, ScanProfile.STANDARD),
+    ("consensus_state", "Low", 4, ScanProfile.STANDARD),
+    ("genesis", "Low", 3, ScanProfile.DEEP),
+)
+
+_INVENTORY_METHODS = (
+    "status",
+    "health",
+    "net_info",
+    "blockchain",
+    "block",
+    "block_by_hash",
+    "block_results",
+    "commit",
+    "validators",
+    "genesis",
+    "unconfirmed_txs",
+    "num_unconfirmed_txs",
+    "abci_info",
+    "abci_query",
+)
+
+_PROFILE_RANK = {
+    ScanProfile.QUICK: 0,
+    ScanProfile.STANDARD: 1,
+    ScanProfile.DEEP: 2,
+}
+
+
+def _profile_at_least(current: ScanProfile, minimum: ScanProfile) -> bool:
+    return _PROFILE_RANK[current] >= _PROFILE_RANK[minimum]
+
 
 COSMOS_RULE_CATALOG = [
     {"rule_id": "COS-IDENT-001", "title": "Tendermint / Cosmos status", "category": "Identity"},
     {"rule_id": "COS-DISC-001", "title": "net_info peer disclosure", "category": "Disclosure"},
+    {"rule_id": "COS-DISC-002", "title": "Consensus / genesis disclosure", "category": "Disclosure"},
+    {"rule_id": "COS-DISC-003", "title": "Public method inventory", "category": "Disclosure"},
     {"rule_id": "COS-NS-001", "title": "Unsafe Tendermint method exposure", "category": "Namespaces"},
     {"rule_id": "MC-TLS-001", "title": "TLS certificate validation", "category": "TLS Security"},
 ]
@@ -155,8 +196,8 @@ class CosmosScannerEngine:
                                 )
                             )
 
-                for method, sev_name, impact in _UNSAFE_JSON_RPC:
-                    if self.limits.name == ScanProfile.QUICK and method.startswith("unsafe"):
+                for method, sev_name, impact, min_profile in _UNSAFE_JSON_RPC:
+                    if not _profile_at_least(self.limits.name, min_profile):
                         continue
                     available, detail = client.method_available(method)
                     if available:
@@ -174,6 +215,60 @@ class CosmosScannerEngine:
                                 score_impact=impact,
                             )
                         )
+
+                for method, sev_name, impact, min_profile in _DISCLOSURE_METHODS:
+                    if not _profile_at_least(self.limits.name, min_profile):
+                        continue
+                    available, detail = client.method_available(method)
+                    if available:
+                        produced.append(
+                            finding(
+                                rule_id="COS-DISC-002",
+                                title=f"Disclosure method exposed: {method}",
+                                category="Disclosure",
+                                severity=Severity[sev_name.upper()],
+                                kind=CheckKind.FINDING,
+                                description=(
+                                    f"RPC accepts `{method}` — useful for ops, noisy on a public edge."
+                                ),
+                                evidence={"method": method, "detail": _trim(detail)},
+                                impact="Consensus/genesis dumps aid reconnaissance and can be heavy.",
+                                remediation=(
+                                    "Restrict dump_consensus_state / consensus_state / genesis "
+                                    "on public Tendermint RPC."
+                                ),
+                                score_impact=impact,
+                            )
+                        )
+
+                if self.limits.name == ScanProfile.DEEP:
+                    exposed: list[str] = []
+                    missing: list[str] = []
+                    for method in _INVENTORY_METHODS:
+                        available, _detail = client.method_available(method)
+                        if available:
+                            exposed.append(method)
+                        else:
+                            missing.append(method)
+                    produced.append(
+                        finding(
+                            rule_id="COS-DISC-003",
+                            title="Public Tendermint method inventory",
+                            category="Disclosure",
+                            severity=Severity.INFO,
+                            kind=CheckKind.EXPECTED_SURFACE,
+                            description=(
+                                f"Probed {len(_INVENTORY_METHODS)} common methods: "
+                                f"{len(exposed)} available, {len(missing)} missing."
+                            ),
+                            evidence={
+                                "exposed": exposed,
+                                "missing": missing,
+                                "probed": list(_INVENTORY_METHODS),
+                            },
+                            score_impact=0,
+                        )
+                    )
 
                 findings_so_far, _ = split_findings(produced)
                 produced.extend(
