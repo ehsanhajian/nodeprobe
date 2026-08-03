@@ -21,7 +21,7 @@ class ScannerEngine:
     def __init__(
         self,
         url: str,
-        profile: str | ScanProfile | ProfileLimits = "Quick",
+        profile: str | ScanProfile | ProfileLimits = "Standard",
         *,
         block_providers: bool = False,
         http_client: httpx.Client | None = None,

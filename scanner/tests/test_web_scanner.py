@@ -87,7 +87,7 @@ def test_cli_web_and_rules(capsys, monkeypatch):
     out = capsys.readouterr().out
     assert "Nodeprobe scan report" in out
     assert "https://example.com" in out
-    assert "Score:" in out
+    assert "Score" in out
 
     assert main(["web", "https://example.com", "--json"]) == 0
     json_out = capsys.readouterr().out

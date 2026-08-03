@@ -74,7 +74,7 @@ class ContractScannerEngine:
         *,
         rpc_url: str,
         chain_id: int | None = None,
-        profile: str | ScanProfile | ProfileLimits = "Quick",
+        profile: str | ScanProfile | ProfileLimits = "Standard",
         abi_json: str | list | None = None,
         fetch_verification: bool = True,
         http_client: httpx.Client | None = None,

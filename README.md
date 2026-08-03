@@ -4,8 +4,10 @@
 
 Local-first security scanning for infrastructure you operate or are authorized to assess. No account. No cloud. No telemetry. Just a CLI that talks to the target and prints a readable report.
 
+Default profile is **Standard** for every scan command (web, RPC, and contracts). Use `--profile Quick` for a fast pass, or `--profile Deep` for a larger budget.
+
 ```bash
-nodeprobe web https://example.com --profile Standard
+nodeprobe web https://example.com
 ```
 
 ```
@@ -51,10 +53,10 @@ Expected surface (not scored as vulnerabilities)
   · Website TLS certificate validation: TLS certificate is valid for this hostname.
 
 ========================================================================
-Tip: use --json for machine-readable output.
+Tip: use --html -o report.html · --json · --verbose for evidence.
 ```
 
-On **Standard** and **Deep**, interesting findings trigger *bounded escalation* — extra read-only probes that confirm impact, nested under the parent as `↳ Next:`. **Quick** stays fast and skips that step.
+On **Standard** (default) and **Deep**, interesting findings trigger *bounded escalation* — extra read-only probes that confirm impact, nested under the parent as `↳ Next:`. **Quick** stays fast and skips that step.
 
 ---
 
@@ -110,12 +112,14 @@ nodeprobe profiles
 
 ## Quick start
 
+All of these use **Standard** by default (escalation enabled). Pass `--profile Quick` or `--profile Deep` to override.
+
 ```bash
 # Website
-nodeprobe web https://example.com --profile Standard
+nodeprobe web https://example.com
 
 # EVM RPC
-nodeprobe scan https://rpc.example.com --profile Standard
+nodeprobe scan https://rpc.example.com
 
 # Auto-detect Solana / Substrate / Cosmos
 nodeprobe rpc https://api.mainnet-beta.solana.com
@@ -123,8 +127,37 @@ nodeprobe substrate https://rpc.polkadot.io
 nodeprobe cosmos https://rpc.cosmos.directory:443
 
 # Contract (read-only eth_call / code fetch)
-nodeprobe contract 0x… --rpc https://rpc.example.com --chain 1 --profile Standard
+nodeprobe contract 0x… --rpc https://rpc.example.com --chain 1
 ```
+
+### Example reports
+
+Live Standard-profile scans against a public Ethereum RPC and the USDC proxy (`0xA0b8…eB48`) on mainnet.
+
+**RPC — CLI**
+
+```bash
+nodeprobe scan https://ethereum.publicnode.com
+```
+
+![Nodeprobe CLI report for ethereum.publicnode.com](docs/screenshots/cli-rpc.png)
+
+**RPC — HTML** (`--html -o report.html`)
+
+![Nodeprobe HTML report for ethereum.publicnode.com](docs/screenshots/html-rpc.png)
+
+**Contract — CLI**
+
+```bash
+nodeprobe contract 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 \
+  --rpc https://ethereum.publicnode.com --chain 1
+```
+
+![Nodeprobe CLI report for USDC contract](docs/screenshots/cli-contract.png)
+
+**Contract — HTML**
+
+![Nodeprobe HTML report for USDC contract](docs/screenshots/html-contract.png)
 
 ### Commands
 
@@ -145,7 +178,7 @@ nodeprobe contract 0x… --rpc https://rpc.example.com --chain 1 --profile Stand
 | Profile | When to use it |
 |---|---|
 | `Quick` | Fast pass — no escalation |
-| `Standard` | Default assessment + confirmation probes |
+| `Standard` | **Default** — assessment + confirmation probes |
 | `Deep` | Larger budget, richer follow-ups |
 
 Legacy aliases still work: `Free` → `Quick`, `Outbound` → `Standard`, `Authorized-Full` → `Deep`.
@@ -153,10 +186,15 @@ Legacy aliases still work: `Free` → `Quick`, `Outbound` → `Standard`, `Autho
 ### Output
 
 ```bash
-nodeprobe web https://example.com                 # human report (default)
+nodeprobe web https://example.com                 # compact human report (Standard)
+nodeprobe web https://example.com --verbose       # include evidence on every finding
+nodeprobe web https://example.com --html -o report.html
 nodeprobe web https://example.com --json --pretty # machine JSON
 nodeprobe web https://example.com --no-color      # plain text
+nodeprobe web https://example.com --profile Quick # fast pass, no escalation
 ```
+
+Open `report.html` in a browser for a shareable, scannable view when the terminal report gets long.
 
 Exit code **`2`** means blocked or aborted (unsafe target, kill switch, unknown RPC family, `--block-providers`, …).
 

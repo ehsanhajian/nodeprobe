@@ -118,7 +118,7 @@ class SolanaScannerEngine:
     def __init__(
         self,
         url: str,
-        profile: str | ScanProfile | ProfileLimits = "Quick",
+        profile: str | ScanProfile | ProfileLimits = "Standard",
         *,
         http_client: httpx.Client | None = None,
         skip_tls_probe: bool = False,
