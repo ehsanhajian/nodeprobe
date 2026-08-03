@@ -14,7 +14,7 @@ from nodeprobe.multichain.substrate_engine import (
     SubstrateScannerEngine,
 )
 from nodeprobe.profiles import PROFILES
-from nodeprobe.report import format_human_report
+from nodeprobe.report import format_html_report, format_human_report
 from nodeprobe.rules import all_rules
 from nodeprobe.rules.web import web_rules
 from nodeprobe.web_engine import WebScannerEngine
@@ -34,21 +34,39 @@ CONTRACT_RULE_CATALOG = [
 
 _PROFILE_HELP = (
     "Scan profile: Quick | Standard | Deep "
-    "(aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep; default: Quick)"
+    "(aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep; default: Standard)"
 )
 _FAMILY_HELP = "RPC family: auto | evm | solana | substrate | cosmos (default: auto)"
 
 
 def _add_output_flags(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
+    fmt = parser.add_mutually_exclusive_group()
+    fmt.add_argument(
         "--json",
         action="store_true",
         help="Emit JSON instead of a human-readable report",
+    )
+    fmt.add_argument(
+        "--html",
+        action="store_true",
+        help="Emit a self-contained HTML report",
     )
     parser.add_argument(
         "--pretty",
         action="store_true",
         help="With --json: indent JSON. Without --json: human report (default).",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        metavar="PATH",
+        help="Write the report to PATH instead of stdout",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Human report: include evidence and full detail for Low/Info findings",
     )
     color = parser.add_mutually_exclusive_group()
     color.add_argument(
@@ -64,7 +82,7 @@ def _add_output_flags(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_rpc_flags(parser: argparse.ArgumentParser, *, include_family: bool = False) -> None:
-    parser.add_argument("--profile", default="Quick", help=_PROFILE_HELP)
+    parser.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     if include_family:
         parser.add_argument("--family", default="auto", help=_FAMILY_HELP)
     parser.add_argument(
@@ -97,7 +115,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     solana = sub.add_parser("solana", help="Scan a Solana JSON-RPC endpoint")
     solana.add_argument("url", help="HTTP(S) Solana RPC URL")
-    solana.add_argument("--profile", default="Quick", help=_PROFILE_HELP)
+    solana.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     _add_output_flags(solana)
 
     substrate = sub.add_parser(
@@ -105,24 +123,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Scan a Substrate / Polkadot JSON-RPC endpoint",
     )
     substrate.add_argument("url", help="HTTP(S) Substrate RPC URL")
-    substrate.add_argument("--profile", default="Quick", help=_PROFILE_HELP)
+    substrate.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     _add_output_flags(substrate)
 
     cosmos = sub.add_parser("cosmos", help="Scan a Cosmos / Tendermint RPC endpoint")
     cosmos.add_argument("url", help="HTTP(S) Tendermint / Cosmos RPC URL")
-    cosmos.add_argument("--profile", default="Quick", help=_PROFILE_HELP)
+    cosmos.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     _add_output_flags(cosmos)
 
     web = sub.add_parser("web", help="Scan a website (HTTP/TLS surface)")
     web.add_argument("url", help="HTTP(S) website URL")
-    web.add_argument("--profile", default="Quick", help=_PROFILE_HELP)
+    web.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     _add_output_flags(web)
 
     contract = sub.add_parser("contract", help="Scan an EVM smart contract via read-only RPC")
     contract.add_argument("address", help="Contract address (0x…)")
     contract.add_argument("--rpc", required=True, help="HTTP(S) JSON-RPC URL for the chain")
     contract.add_argument("--chain", type=int, default=None, help="Expected chain ID")
-    contract.add_argument("--profile", default="Quick", help=_PROFILE_HELP)
+    contract.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     contract.add_argument(
         "--no-sourcify",
         action="store_true",
@@ -150,11 +168,30 @@ def _color_flag(args: argparse.Namespace) -> bool | None:
     return None
 
 
-def _print_result(result, *, as_json: bool, pretty: bool, color: bool | None) -> int:
+def _print_result(
+    result,
+    *,
+    as_json: bool,
+    as_html: bool,
+    pretty: bool,
+    color: bool | None,
+    verbose: bool = False,
+    output: str | None = None,
+) -> int:
     if as_json:
-        print(json.dumps(result.to_dict(), indent=2 if pretty else None))
+        payload = json.dumps(result.to_dict(), indent=2 if pretty else None)
+    elif as_html:
+        payload = format_html_report(result)
     else:
-        print(format_human_report(result, color=color), end="")
+        payload = format_human_report(result, color=color, verbose=verbose)
+
+    if output:
+        with open(output, "w", encoding="utf-8") as handle:
+            handle.write(payload if payload.endswith("\n") else payload + "\n")
+        print(f"Wrote report to {output}", file=sys.stderr)
+    else:
+        print(payload, end="" if payload.endswith("\n") else "\n")
+
     if result.aborted and result.abort_reason in {
         "unsafe_target",
         "third_party_provider",
@@ -243,6 +280,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     color = _color_flag(args)
+    out_kwargs = {
+        "as_json": bool(getattr(args, "json", False)),
+        "as_html": bool(getattr(args, "html", False)),
+        "pretty": bool(getattr(args, "pretty", False)),
+        "color": color,
+        "verbose": bool(getattr(args, "verbose", False)),
+        "output": getattr(args, "output", None),
+    }
 
     if args.command == "rpc":
         result = MultichainRpcEngine(
@@ -251,7 +296,7 @@ def main(argv: list[str] | None = None) -> int:
             family=args.family,
             block_providers=args.block_providers,
         ).run()
-        return _print_result(result, as_json=args.json, pretty=args.pretty, color=color)
+        return _print_result(result, **out_kwargs)
 
     if args.command == "scan":
         result = ScannerEngine(
@@ -259,23 +304,23 @@ def main(argv: list[str] | None = None) -> int:
             args.profile,
             block_providers=args.block_providers,
         ).run()
-        return _print_result(result, as_json=args.json, pretty=args.pretty, color=color)
+        return _print_result(result, **out_kwargs)
 
     if args.command == "solana":
         result = SolanaScannerEngine(args.url, args.profile).run()
-        return _print_result(result, as_json=args.json, pretty=args.pretty, color=color)
+        return _print_result(result, **out_kwargs)
 
     if args.command == "substrate":
         result = SubstrateScannerEngine(args.url, args.profile).run()
-        return _print_result(result, as_json=args.json, pretty=args.pretty, color=color)
+        return _print_result(result, **out_kwargs)
 
     if args.command == "cosmos":
         result = CosmosScannerEngine(args.url, args.profile).run()
-        return _print_result(result, as_json=args.json, pretty=args.pretty, color=color)
+        return _print_result(result, **out_kwargs)
 
     if args.command == "web":
         result = WebScannerEngine(args.url, args.profile).run()
-        return _print_result(result, as_json=args.json, pretty=args.pretty, color=color)
+        return _print_result(result, **out_kwargs)
 
     if args.command == "contract":
         result = ContractScannerEngine(
@@ -285,7 +330,7 @@ def main(argv: list[str] | None = None) -> int:
             profile=args.profile,
             fetch_verification=not args.no_sourcify,
         ).run()
-        return _print_result(result, as_json=args.json, pretty=args.pretty, color=color)
+        return _print_result(result, **out_kwargs)
 
     parser.error(f"Unknown command: {args.command}")
     return 1

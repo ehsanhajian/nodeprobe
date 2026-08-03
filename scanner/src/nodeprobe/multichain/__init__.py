@@ -23,7 +23,7 @@ class MultichainRpcEngine:
     def __init__(
         self,
         url: str,
-        profile: str | ScanProfile | ProfileLimits = "Quick",
+        profile: str | ScanProfile | ProfileLimits = "Standard",
         *,
         family: str = "auto",
         block_providers: bool = False,

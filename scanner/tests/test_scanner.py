@@ -272,6 +272,7 @@ def test_human_report_format():
                 description="Response does not include HSTS.",
                 impact="Downgrade risk.",
                 remediation="Set Strict-Transport-Security.",
+                evidence={"header": "strict-transport-security"},
                 score_impact=12,
             )
         ],
@@ -280,15 +281,74 @@ def test_human_report_format():
     )
     text = format_human_report(result, color=False)
     assert "Nodeprobe scan report" in text
-    assert "Score:" in text and "54/100" in text
+    assert "Score" in text and "54/100" in text
     assert "[Medium] Missing HSTS header" in text
-    assert "Fix:" in text and "Set Strict-Transport-Security." in text
+    assert "Fix" in text and "Set Strict-Transport-Security." in text
+    assert "Evidence" not in text  # compact by default
     assert "\033[" not in text
+
+    verbose = format_human_report(result, color=False, verbose=True)
+    assert "Evidence" in verbose
+    assert "header=" in verbose
 
     colored = format_human_report(result, color=True)
     assert "\033[" in colored
     assert "54/100" in colored
     assert "[Medium]" in colored
+
+
+def test_html_report_format(tmp_path):
+    from nodeprobe.models import ScanProfile, ScanResult
+    from nodeprobe.report import format_html_report
+
+    result = ScanResult(
+        scanner_version="0.1.0",
+        profile=ScanProfile.STANDARD,
+        endpoint="https://example.com",
+        started_at="t0",
+        finished_at="t1",
+        duration_ms=2100,
+        requests_made=6,
+        chain_id=None,
+        network_name=None,
+        client_version=None,
+        score=37,
+        findings=[
+            Finding(
+                rule_id="WEB-HDR-001",
+                title="Missing CSP header",
+                category="HTTP Security",
+                severity=Severity.MEDIUM,
+                confidence=Confidence.CONFIRMED,
+                kind=CheckKind.FINDING,
+                description="No CSP.",
+                remediation="Set CSP.",
+                score_impact=10,
+            ),
+            Finding(
+                rule_id="WEB-HDR-001-NEXT",
+                title="Next: no frame controls",
+                category="Escalation",
+                severity=Severity.MEDIUM,
+                confidence=Confidence.CONFIRMED,
+                kind=CheckKind.FINDING,
+                description="Framing open.",
+                parent_rule_id="WEB-HDR-001",
+                score_impact=8,
+            ),
+        ],
+        expected_surface=[],
+        errors=[],
+    )
+    doc = format_html_report(result)
+    assert "<!DOCTYPE html>" in doc
+    assert "Missing CSP header" in doc
+    assert "no frame controls" in doc
+    assert "37/100" in doc
+    assert "finding child" in doc
+    path = tmp_path / "report.html"
+    path.write_text(doc, encoding="utf-8")
+    assert path.stat().st_size > 500
 
 
 def test_cli_scan_json_flag(capsys, monkeypatch):
