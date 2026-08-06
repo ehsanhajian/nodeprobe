@@ -65,8 +65,10 @@ On **Standard** (default) and **Deep**, interesting findings trigger *bounded es
 | Surface | What Nodeprobe looks at |
 |---|---|
 | **Web** | TLS, security headers (presence + HSTS/CSP policy grading), `security.txt`, `robots.txt`, server disclosure |
-| **RPC** | EVM, Solana, Substrate/Polkadot, Cosmos — auto-detect or pick a family; sensitive-method catalogs and Deep method inventories |
-| **Contracts** | Code presence, proxies, bytecode heuristics, Sourcify verification (read-only) |
+| **RPC** | Protocol **families**: EVM, Solana, Substrate/Polkadot, Cosmos — auto-detect or `--family`; sensitive-method catalogs and Deep inventories |
+| **Contracts** | EVM code presence, proxies, bytecode heuristics, Sourcify verification (read-only) |
+
+**EVM networks:** there is no per-chain engine. `nodeprobe scan <rpc>` (or `rpc --family evm`) works for **any** EVM chain — Ethereum, L2s, sidechains, appchains. Chain names come from a bundled [Chainlist](https://chainid.network) snapshot when the `chainId` is known; unknown IDs still scan with a generic name. You only need a new scanner when the **protocol** is not EVM (e.g. Solana, Cosmos).
 
 ### Web header grading
 
@@ -118,15 +120,16 @@ All of these use **Standard** by default (escalation enabled). Pass `--profile Q
 # Website
 nodeprobe web https://example.com
 
-# EVM RPC
+# EVM RPC — any EVM chain (Ethereum, Base, Arbitrum, Astar, …); same command
 nodeprobe scan https://rpc.example.com
+nodeprobe rpc https://rpc.example.com --family evm
 
-# Auto-detect Solana / Substrate / Cosmos
+# Other protocol families (not EVM)
 nodeprobe rpc https://api.mainnet-beta.solana.com
 nodeprobe substrate https://rpc.polkadot.io
 nodeprobe cosmos https://rpc.cosmos.directory:443
 
-# Contract (read-only eth_call / code fetch)
+# Contract (read-only eth_call / code fetch) — any EVM chainId
 nodeprobe contract 0x… --rpc https://rpc.example.com --chain 1
 ```
 
