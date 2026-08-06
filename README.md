@@ -65,7 +65,7 @@ On **Standard** (default) and **Deep**, interesting findings trigger *bounded es
 | Surface | What Nodeprobe looks at |
 |---|---|
 | **Web** | TLS, security headers (presence + HSTS/CSP policy grading), `security.txt`, `robots.txt`, server disclosure |
-| **RPC** | Protocol **families**: EVM, Solana, Substrate/Polkadot, Cosmos — auto-detect or `--family`; sensitive-method catalogs and Deep inventories |
+| **RPC** | Protocol **families**: EVM, Solana, Substrate/Polkadot, Cosmos, Aptos — auto-detect or `--family`; sensitive-method catalogs and Deep inventories |
 | **Contracts** | EVM code presence, proxies, bytecode heuristics, Sourcify verification (read-only) |
 
 **EVM networks:** there is no per-chain engine. `nodeprobe scan <rpc>` (or `rpc --family evm`) works for **any** EVM chain — Ethereum, L2s, sidechains, appchains. Chain names come from a bundled [Chainlist](https://chainid.network) snapshot when the `chainId` is known; unknown IDs still scan with a generic name. You only need a new scanner when the **protocol** is not EVM (e.g. Solana, Cosmos).
@@ -128,6 +128,7 @@ nodeprobe rpc https://rpc.example.com --family evm
 nodeprobe rpc https://api.mainnet-beta.solana.com
 nodeprobe substrate https://rpc.polkadot.io
 nodeprobe cosmos https://rpc.cosmos.directory:443
+nodeprobe aptos https://fullnode.mainnet.aptoslabs.com/v1
 
 # Contract (read-only eth_call / code fetch) — any EVM chainId
 nodeprobe contract 0x… --rpc https://rpc.example.com --chain 1
@@ -172,6 +173,7 @@ nodeprobe contract 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 \
 | `nodeprobe solana <url>` | Solana JSON-RPC |
 | `nodeprobe substrate <url>` | Substrate / Polkadot JSON-RPC |
 | `nodeprobe cosmos <url>` | Cosmos / Tendermint RPC |
+| `nodeprobe aptos <url>` | Aptos fullnode REST (`/v1`) |
 | `nodeprobe contract <addr> --rpc <url> [--chain <id>]` | EVM contract posture |
 | `nodeprobe profiles` | Show profile budgets |
 | `nodeprobe rules [--module all]` | Rule catalog |

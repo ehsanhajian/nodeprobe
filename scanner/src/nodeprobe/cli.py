@@ -7,6 +7,7 @@ import sys
 from nodeprobe.contract_engine import ContractScannerEngine
 from nodeprobe.engine import ScannerEngine
 from nodeprobe.multichain import MultichainRpcEngine
+from nodeprobe.multichain.aptos_engine import APTOS_RULE_CATALOG, AptosScannerEngine
 from nodeprobe.multichain.cosmos_engine import COSMOS_RULE_CATALOG, CosmosScannerEngine
 from nodeprobe.multichain.solana_engine import SOLANA_RULE_CATALOG, SolanaScannerEngine
 from nodeprobe.multichain.substrate_engine import (
@@ -36,7 +37,9 @@ _PROFILE_HELP = (
     "Scan profile: Quick | Standard | Deep "
     "(aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep; default: Standard)"
 )
-_FAMILY_HELP = "RPC family: auto | evm | solana | substrate | cosmos (default: auto)"
+_FAMILY_HELP = (
+    "RPC family: auto | evm | solana | substrate | cosmos | aptos (default: auto)"
+)
 
 
 def _add_output_flags(parser: argparse.ArgumentParser) -> None:
@@ -131,6 +134,11 @@ def build_parser() -> argparse.ArgumentParser:
     cosmos.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     _add_output_flags(cosmos)
 
+    aptos = sub.add_parser("aptos", help="Scan an Aptos fullnode REST API (/v1)")
+    aptos.add_argument("url", help="HTTP(S) Aptos fullnode URL (with or without /v1)")
+    aptos.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
+    _add_output_flags(aptos)
+
     web = sub.add_parser("web", help="Scan a website (HTTP/TLS surface)")
     web.add_argument("url", help="HTTP(S) website URL")
     web.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
@@ -152,7 +160,17 @@ def build_parser() -> argparse.ArgumentParser:
     rules = sub.add_parser("rules", help="List registered rules")
     rules.add_argument(
         "--module",
-        choices=("rpc", "evm", "web", "contract", "solana", "substrate", "cosmos", "all"),
+        choices=(
+            "rpc",
+            "evm",
+            "web",
+            "contract",
+            "solana",
+            "substrate",
+            "cosmos",
+            "aptos",
+            "all",
+        ),
         default="all",
         help="Rule module to list (default: all)",
     )
@@ -276,6 +294,17 @@ def main(argv: list[str] | None = None) -> int:
                 {**item, "severity": "varies", "kind": "finding", "profiles": ["Quick", "Standard", "Deep"], "module": "cosmos"}
                 for item in COSMOS_RULE_CATALOG
             )
+        if module in {"aptos", "rpc", "all"}:
+            payload.extend(
+                {
+                    **item,
+                    "severity": "varies",
+                    "kind": "finding",
+                    "profiles": ["Quick", "Standard", "Deep"],
+                    "module": "aptos",
+                }
+                for item in APTOS_RULE_CATALOG
+            )
         print(json.dumps(payload, indent=2))
         return 0
 
@@ -316,6 +345,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "cosmos":
         result = CosmosScannerEngine(args.url, args.profile).run()
+        return _print_result(result, **out_kwargs)
+
+    if args.command == "aptos":
+        result = AptosScannerEngine(args.url, args.profile).run()
         return _print_result(result, **out_kwargs)
 
     if args.command == "web":
