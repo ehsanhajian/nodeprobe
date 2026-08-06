@@ -1,4 +1,4 @@
-"""Dispatch RPC scans across EVM / Solana / Substrate / Cosmos families."""
+"""Dispatch RPC scans across EVM / Solana / Substrate / Cosmos / Aptos families."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from nodeprobe import __version__, killswitch
 from nodeprobe.engine import ScannerEngine
 from nodeprobe.killswitch import KillSwitchActive
 from nodeprobe.models import ScanError, ScanProfile, ScanResult
+from nodeprobe.multichain.aptos_engine import AptosScannerEngine
 from nodeprobe.multichain.cosmos_engine import CosmosScannerEngine
 from nodeprobe.multichain.detect import RpcFamily, detect_family
 from nodeprobe.multichain.solana_engine import SolanaScannerEngine
@@ -113,7 +114,7 @@ class MultichainRpcEngine:
                             code="unknown_family",
                             message=(
                                 "Could not detect RPC family. "
-                                "Pass --family evm|solana|substrate|cosmos."
+                                "Pass --family evm|solana|substrate|cosmos|aptos."
                             ),
                         )
                     ],
@@ -149,6 +150,14 @@ class MultichainRpcEngine:
             ).run()
         if family in {"cosmos", "tendermint"}:
             return CosmosScannerEngine(
+                self.url,
+                self.profile_arg,
+                http_client=self.http_client,
+                skip_tls_probe=self.skip_tls_probe,
+                resolve_dns=self.resolve_dns,
+            ).run()
+        if family == "aptos":
+            return AptosScannerEngine(
                 self.url,
                 self.profile_arg,
                 http_client=self.http_client,

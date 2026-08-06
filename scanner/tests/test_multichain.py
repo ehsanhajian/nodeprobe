@@ -260,3 +260,63 @@ def test_cli_multichain_rules(capsys):
     cosmos_out = capsys.readouterr().out
     assert "COS-IDENT-001" in cosmos_out
     assert "COS-DISC-002" in cosmos_out
+    assert main(["rules", "--module", "aptos"]) == 0
+    assert "APT-IDENT-001" in capsys.readouterr().out
+
+
+def test_aptos_scan_and_detect():
+    from nodeprobe.multichain.aptos_engine import AptosScannerEngine
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path.rstrip("/")
+        if path.endswith("/v1") and request.method == "GET":
+            return httpx.Response(
+                200,
+                json={
+                    "chain_id": 1,
+                    "epoch": "1",
+                    "ledger_version": "100",
+                    "oldest_ledger_version": "0",
+                    "ledger_timestamp": "1",
+                    "node_role": "full_node",
+                    "oldest_block_height": "0",
+                    "block_height": "10",
+                    "git_hash": "abc123",
+                },
+            )
+        if path.endswith("/v1/-/healthy"):
+            return httpx.Response(200, json={"message": "keep going"})
+        if path.endswith("/v1/info"):
+            return httpx.Response(200, json={"build": "test"})
+        if path.endswith("/v1/spec"):
+            return httpx.Response(200, text="<html>openapi</html>")
+        if path.endswith("/v1/transactions/simulate") and request.method == "POST":
+            return httpx.Response(400, json={"error_code": "invalid_input"})
+        if path.endswith("/v1/transactions") and request.method == "POST":
+            return httpx.Response(400, json={"error_code": "invalid_input"})
+        return httpx.Response(404, json={"error": "not found"})
+
+    client = httpx.Client(transport=make_transport(handler))
+    result = AptosScannerEngine(
+        "https://fullnode.mainnet.aptoslabs.com/v1",
+        "Standard",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+    assert result.aborted is False
+    assert result.chain_id == 1
+    assert any(f.rule_id == "APT-DISC-001" for f in result.findings)
+    assert any(f.rule_id == "APT-NS-001" for f in result.findings)
+
+    detected = MultichainRpcEngine(
+        "https://fullnode.mainnet.aptoslabs.com/v1",
+        "Quick",
+        family="auto",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+    client.close()
+    assert detected.aborted is False
+    assert detected.network_name and "Aptos" in detected.network_name
