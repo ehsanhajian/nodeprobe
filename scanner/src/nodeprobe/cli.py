@@ -10,6 +10,7 @@ from nodeprobe.multichain import MultichainRpcEngine
 from nodeprobe.multichain.aptos_engine import APTOS_RULE_CATALOG, AptosScannerEngine
 from nodeprobe.multichain.cosmos_engine import COSMOS_RULE_CATALOG, CosmosScannerEngine
 from nodeprobe.multichain.solana_engine import SOLANA_RULE_CATALOG, SolanaScannerEngine
+from nodeprobe.multichain.starknet_engine import STARKNET_RULE_CATALOG, StarknetScannerEngine
 from nodeprobe.multichain.substrate_engine import (
     SUBSTRATE_RULE_CATALOG,
     SubstrateScannerEngine,
@@ -39,7 +40,7 @@ _PROFILE_HELP = (
     "(aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep; default: Standard)"
 )
 _FAMILY_HELP = (
-    "RPC family: auto | evm | solana | substrate | cosmos | aptos | sui "
+    "RPC family: auto | evm | solana | substrate | cosmos | aptos | sui | starknet "
     "(default: auto)"
 )
 
@@ -146,6 +147,11 @@ def build_parser() -> argparse.ArgumentParser:
     sui.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     _add_output_flags(sui)
 
+    starknet = sub.add_parser("starknet", help="Scan a Starknet JSON-RPC endpoint")
+    starknet.add_argument("url", help="HTTP(S) Starknet JSON-RPC URL")
+    starknet.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
+    _add_output_flags(starknet)
+
     web = sub.add_parser("web", help="Scan a website (HTTP/TLS surface)")
     web.add_argument("url", help="HTTP(S) website URL")
     web.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
@@ -177,6 +183,7 @@ def build_parser() -> argparse.ArgumentParser:
             "cosmos",
             "aptos",
             "sui",
+            "starknet",
             "all",
         ),
         default="all",
@@ -324,6 +331,17 @@ def main(argv: list[str] | None = None) -> int:
                 }
                 for item in SUI_RULE_CATALOG
             )
+        if module in {"starknet", "rpc", "all"}:
+            payload.extend(
+                {
+                    **item,
+                    "severity": "varies",
+                    "kind": "finding",
+                    "profiles": ["Quick", "Standard", "Deep"],
+                    "module": "starknet",
+                }
+                for item in STARKNET_RULE_CATALOG
+            )
         print(json.dumps(payload, indent=2))
         return 0
 
@@ -372,6 +390,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "sui":
         result = SuiScannerEngine(args.url, args.profile).run()
+        return _print_result(result, **out_kwargs)
+
+    if args.command == "starknet":
+        result = StarknetScannerEngine(args.url, args.profile).run()
         return _print_result(result, **out_kwargs)
 
     if args.command == "web":

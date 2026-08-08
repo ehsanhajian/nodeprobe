@@ -6,10 +6,11 @@ from typing import Literal
 
 from nodeprobe.multichain.aptos_engine import looks_like_aptos_ledger, normalize_aptos_base
 from nodeprobe.multichain.common import is_rpc_failure
+from nodeprobe.multichain.starknet_engine import looks_like_starknet_chain_id
 from nodeprobe.multichain.sui_engine import looks_like_sui_graphql
 from nodeprobe.rpc import RpcClient
 
-RpcFamily = Literal["evm", "solana", "substrate", "cosmos", "aptos", "sui"]
+RpcFamily = Literal["evm", "solana", "substrate", "cosmos", "aptos", "sui", "starknet"]
 
 
 def detect_family(client: RpcClient) -> RpcFamily | None:
@@ -22,6 +23,11 @@ def detect_family(client: RpcClient) -> RpcFamily | None:
     # Sui GraphQL (JSON-RPC was disabled on Foundation nodes in July 2026)
     if _detect_sui(client):
         return "sui"
+
+    # Starknet (before EVM because both use 0x-prefixed chain identifiers)
+    ok, result = client.method_available("starknet_chainId")
+    if ok and looks_like_starknet_chain_id(result):
+        return "starknet"
 
     # Solana
     ok, result = client.method_available("getHealth")
