@@ -200,7 +200,12 @@ def format_human_report(
     )
     if result.network_name or result.chain_id is not None:
         chain = result.network_name or "unknown"
-        lines.append(row("Chain", f"{chain} ({result.chain_id})"))
+        chain_label = (
+            f"{chain} ({result.chain_id})"
+            if result.chain_id is not None
+            else chain
+        )
+        lines.append(row("Chain", chain_label))
     if result.client_version:
         lines.append(row("Client", result.client_version))
     if result.provider:
@@ -434,9 +439,11 @@ def format_html_report(result: ScanResult) -> str:
     )
     chain_row = ""
     if result.network_name or result.chain_id is not None:
+        chain_label = str(result.network_name or "unknown")
+        if result.chain_id is not None:
+            chain_label += f" ({result.chain_id})"
         chain_row = (
-            f"<div><dt>Chain</dt><dd>{esc(str(result.network_name or 'unknown'))} "
-            f"({esc(str(result.chain_id))})</dd></div>"
+            f"<div><dt>Chain</dt><dd>{esc(chain_label)}</dd></div>"
         )
     client_row = (
         f"<div><dt>Client</dt><dd>{esc(result.client_version)}</dd></div>"

@@ -258,7 +258,7 @@ def test_human_report_format():
         duration_ms=1500,
         requests_made=4,
         chain_id=None,
-        network_name=None,
+        network_name="Sui",
         client_version=None,
         score=54,
         findings=[
@@ -284,6 +284,8 @@ def test_human_report_format():
     assert "Score" in text and "54/100" in text
     assert "[Medium] Missing HSTS header" in text
     assert "Fix" in text and "Set Strict-Transport-Security." in text
+    assert "Chain      Sui" in text
+    assert "Sui (None)" not in text
     assert "Evidence" not in text  # compact by default
     assert "\033[" not in text
 
@@ -310,7 +312,7 @@ def test_html_report_format(tmp_path):
         duration_ms=2100,
         requests_made=6,
         chain_id=None,
-        network_name=None,
+        network_name="Sui",
         client_version=None,
         score=37,
         findings=[
@@ -346,6 +348,8 @@ def test_html_report_format(tmp_path):
     assert "no frame controls" in doc
     assert "37/100" in doc
     assert "finding child" in doc
+    assert "<dd>Sui</dd>" in doc
+    assert "Sui (None)" not in doc
     path = tmp_path / "report.html"
     path.write_text(doc, encoding="utf-8")
     assert path.stat().st_size > 500

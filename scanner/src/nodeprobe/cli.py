@@ -14,6 +14,7 @@ from nodeprobe.multichain.substrate_engine import (
     SUBSTRATE_RULE_CATALOG,
     SubstrateScannerEngine,
 )
+from nodeprobe.multichain.sui_engine import SUI_RULE_CATALOG, SuiScannerEngine
 from nodeprobe.profiles import PROFILES
 from nodeprobe.report import format_html_report, format_human_report
 from nodeprobe.rules import all_rules
@@ -38,7 +39,8 @@ _PROFILE_HELP = (
     "(aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep; default: Standard)"
 )
 _FAMILY_HELP = (
-    "RPC family: auto | evm | solana | substrate | cosmos | aptos (default: auto)"
+    "RPC family: auto | evm | solana | substrate | cosmos | aptos | sui "
+    "(default: auto)"
 )
 
 
@@ -139,6 +141,11 @@ def build_parser() -> argparse.ArgumentParser:
     aptos.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     _add_output_flags(aptos)
 
+    sui = sub.add_parser("sui", help="Scan a Sui GraphQL RPC endpoint")
+    sui.add_argument("url", help="HTTP(S) Sui GraphQL RPC URL")
+    sui.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
+    _add_output_flags(sui)
+
     web = sub.add_parser("web", help="Scan a website (HTTP/TLS surface)")
     web.add_argument("url", help="HTTP(S) website URL")
     web.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
@@ -169,6 +176,7 @@ def build_parser() -> argparse.ArgumentParser:
             "substrate",
             "cosmos",
             "aptos",
+            "sui",
             "all",
         ),
         default="all",
@@ -305,6 +313,17 @@ def main(argv: list[str] | None = None) -> int:
                 }
                 for item in APTOS_RULE_CATALOG
             )
+        if module in {"sui", "rpc", "all"}:
+            payload.extend(
+                {
+                    **item,
+                    "severity": "varies",
+                    "kind": "finding",
+                    "profiles": ["Quick", "Standard", "Deep"],
+                    "module": "sui",
+                }
+                for item in SUI_RULE_CATALOG
+            )
         print(json.dumps(payload, indent=2))
         return 0
 
@@ -349,6 +368,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "aptos":
         result = AptosScannerEngine(args.url, args.profile).run()
+        return _print_result(result, **out_kwargs)
+
+    if args.command == "sui":
+        result = SuiScannerEngine(args.url, args.profile).run()
         return _print_result(result, **out_kwargs)
 
     if args.command == "web":

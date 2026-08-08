@@ -1,4 +1,4 @@
-"""Dispatch RPC scans across EVM / Solana / Substrate / Cosmos / Aptos families."""
+"""Dispatch scans across supported blockchain RPC families."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from nodeprobe.multichain.cosmos_engine import CosmosScannerEngine
 from nodeprobe.multichain.detect import RpcFamily, detect_family
 from nodeprobe.multichain.solana_engine import SolanaScannerEngine
 from nodeprobe.multichain.substrate_engine import SubstrateScannerEngine
+from nodeprobe.multichain.sui_engine import SuiScannerEngine
 from nodeprobe.profiles import ProfileLimits, get_profile
 from nodeprobe.rpc import RpcClient
 from nodeprobe.safety import UnsafeTargetError, mask_credentials, validate_target
@@ -114,7 +115,7 @@ class MultichainRpcEngine:
                             code="unknown_family",
                             message=(
                                 "Could not detect RPC family. "
-                                "Pass --family evm|solana|substrate|cosmos|aptos."
+                                "Pass --family evm|solana|substrate|cosmos|aptos|sui."
                             ),
                         )
                     ],
@@ -158,6 +159,14 @@ class MultichainRpcEngine:
             ).run()
         if family == "aptos":
             return AptosScannerEngine(
+                self.url,
+                self.profile_arg,
+                http_client=self.http_client,
+                skip_tls_probe=self.skip_tls_probe,
+                resolve_dns=self.resolve_dns,
+            ).run()
+        if family == "sui":
+            return SuiScannerEngine(
                 self.url,
                 self.profile_arg,
                 http_client=self.http_client,

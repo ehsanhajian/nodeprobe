@@ -10,6 +10,7 @@ from nodeprobe.multichain import MultichainRpcEngine
 from nodeprobe.multichain.cosmos_engine import CosmosScannerEngine
 from nodeprobe.multichain.solana_engine import SolanaScannerEngine
 from nodeprobe.multichain.substrate_engine import SubstrateScannerEngine
+from nodeprobe.multichain.sui_engine import SuiScannerEngine
 
 
 def make_transport(handler) -> httpx.MockTransport:
@@ -262,6 +263,8 @@ def test_cli_multichain_rules(capsys):
     assert "COS-DISC-002" in cosmos_out
     assert main(["rules", "--module", "aptos"]) == 0
     assert "APT-IDENT-001" in capsys.readouterr().out
+    assert main(["rules", "--module", "sui"]) == 0
+    assert "SUI-IDENT-001" in capsys.readouterr().out
 
 
 def test_aptos_scan_and_detect():
@@ -320,3 +323,86 @@ def test_aptos_scan_and_detect():
     client.close()
     assert detected.aborted is False
     assert detected.network_name and "Aptos" in detected.network_name
+
+
+def test_sui_graphql_scan_and_detect():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            # Aptos auto-detection runs before Sui detection.
+            return httpx.Response(405, json={"error": "method not allowed"})
+
+        body = json.loads(request.content.decode())
+        query = body.get("query", "")
+        if "NodeprobeDetect" in query:
+            return httpx.Response(
+                200,
+                json={"data": {"chainIdentifier": "4btiuiMPvEENsttpZC7CZzC6fZR"}},
+            )
+        if "NodeprobeIdentity" in query:
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "chainIdentifier": "4btiuiMPvEENsttpZC7CZzC6fZR",
+                        "checkpoint": {
+                            "sequenceNumber": 123,
+                            "digest": "checkpoint-digest",
+                            "timestamp": "2099-01-01T00:00:00Z",
+                        },
+                    }
+                },
+            )
+        if "NodeprobeSchema" in query:
+            return httpx.Response(
+                200,
+                json={
+                    "data": {
+                        "__schema": {
+                            "queryType": {"name": "Query"},
+                            "mutationType": {
+                                "name": "Mutation",
+                                "fields": [{"name": "executeTransactionBlock"}],
+                            },
+                        }
+                    }
+                },
+            )
+        return rpc_error(body.get("id", 1), -32601, "Method not found")
+
+    client = httpx.Client(transport=make_transport(handler))
+    result = SuiScannerEngine(
+        "https://graphql.mainnet.sui.io/graphql",
+        "Standard",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+
+    assert result.aborted is False
+    assert result.network_name == "Sui"
+    assert any(f.rule_id == "SUI-GQL-001" for f in result.findings)
+    assert any(f.rule_id == "SUI-IDENT-001" for f in result.expected_surface)
+    assert any(f.rule_id == "SUI-GQL-002" for f in result.expected_surface)
+
+    deep = SuiScannerEngine(
+        "https://graphql.mainnet.sui.io/graphql",
+        "Deep",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+    assert deep.aborted is False
+    assert not any(f.rule_id == "SUI-LEGACY-001" for f in deep.findings)
+
+    detected = MultichainRpcEngine(
+        "https://graphql.mainnet.sui.io/graphql",
+        "Quick",
+        family="auto",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+    client.close()
+
+    assert detected.aborted is False
+    assert detected.network_name == "Sui"
