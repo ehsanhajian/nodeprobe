@@ -13,6 +13,7 @@ from nodeprobe.models import ScanError, ScanProfile, ScanResult
 from nodeprobe.multichain.aptos_engine import AptosScannerEngine
 from nodeprobe.multichain.cosmos_engine import CosmosScannerEngine
 from nodeprobe.multichain.detect import RpcFamily, detect_family
+from nodeprobe.multichain.near_engine import NearScannerEngine
 from nodeprobe.multichain.solana_engine import SolanaScannerEngine
 from nodeprobe.multichain.starknet_engine import StarknetScannerEngine
 from nodeprobe.multichain.substrate_engine import SubstrateScannerEngine
@@ -117,7 +118,7 @@ class MultichainRpcEngine:
                             message=(
                                 "Could not detect RPC family. "
                                 "Pass --family "
-                                "evm|solana|substrate|cosmos|aptos|sui|starknet."
+                                "evm|solana|substrate|cosmos|aptos|sui|starknet|near."
                             ),
                         )
                     ],
@@ -177,6 +178,14 @@ class MultichainRpcEngine:
             ).run()
         if family == "starknet":
             return StarknetScannerEngine(
+                self.url,
+                self.profile_arg,
+                http_client=self.http_client,
+                skip_tls_probe=self.skip_tls_probe,
+                resolve_dns=self.resolve_dns,
+            ).run()
+        if family == "near":
+            return NearScannerEngine(
                 self.url,
                 self.profile_arg,
                 http_client=self.http_client,

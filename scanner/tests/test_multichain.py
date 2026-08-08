@@ -8,6 +8,7 @@ import httpx
 from nodeprobe.cli import main
 from nodeprobe.multichain import MultichainRpcEngine
 from nodeprobe.multichain.cosmos_engine import CosmosScannerEngine
+from nodeprobe.multichain.near_engine import NearScannerEngine, looks_like_near_status
 from nodeprobe.multichain.solana_engine import SolanaScannerEngine
 from nodeprobe.multichain.starknet_engine import StarknetScannerEngine, decode_felt_text
 from nodeprobe.multichain.substrate_engine import SubstrateScannerEngine
@@ -268,6 +269,8 @@ def test_cli_multichain_rules(capsys):
     assert "SUI-IDENT-001" in capsys.readouterr().out
     assert main(["rules", "--module", "starknet"]) == 0
     assert "STRK-IDENT-001" in capsys.readouterr().out
+    assert main(["rules", "--module", "near"]) == 0
+    assert "NEAR-IDENT-001" in capsys.readouterr().out
 
 
 def test_aptos_scan_and_detect():
@@ -485,3 +488,89 @@ def test_starknet_scan_and_detect():
 def test_decode_starknet_chain_id_felt():
     assert decode_felt_text("0x534e5f5345504f4c4941") == "SN_SEPOLIA"
     assert decode_felt_text("not-hex") is None
+
+
+def test_near_scan_and_detect():
+    status = {
+        "chain_id": "mainnet",
+        "protocol_version": 80,
+        "latest_protocol_version": 80,
+        "version": {"version": "2.7.0", "build": "release"},
+        "sync_info": {
+            "syncing": False,
+            "latest_block_height": 123456,
+            "latest_block_time": "2099-01-01T00:00:00Z",
+        },
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            # Aptos auto-detection runs before JSON-RPC family probes.
+            return httpx.Response(405, json={"error": "method not allowed"})
+
+        body = json.loads(request.content.decode())
+        if "query" in body:
+            # Sui GraphQL auto-detection runs before JSON-RPC family probes.
+            return httpx.Response(200, json={"errors": [{"message": "not graphql"}]})
+
+        method = body["method"]
+        req_id = body["id"]
+        if method == "status":
+            return rpc_result(req_id, status)
+        if method == "health":
+            return rpc_result(req_id, None)
+        if method == "network_info":
+            return rpc_result(
+                req_id,
+                {
+                    "active_peers": [{"id": "peer-1"}],
+                    "known_producers": [{"account_id": "validator.near"}],
+                },
+            )
+        if method in {
+            "client_config",
+            "adv_produce_blocks",
+            "send_tx",
+        }:
+            # NEAR commonly returns JSON-RPC invalid-params errors over HTTP 400.
+            return httpx.Response(
+                400,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32602, "message": "Invalid params"},
+                },
+            )
+        return rpc_error(req_id, -32601, "Method not found")
+
+    client = httpx.Client(transport=make_transport(handler))
+    result = NearScannerEngine(
+        "https://rpc.mainnet.near.org",
+        "Standard",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+
+    assert result.aborted is False
+    assert result.network_name == "NEAR Mainnet"
+    assert result.client_version == "2.7.0 (release)"
+    assert any(f.rule_id == "NEAR-ADV-001" for f in result.findings)
+    assert any(f.rule_id == "NEAR-DISC-001" for f in result.findings)
+    assert any(f.rule_id == "NEAR-DISC-002" for f in result.findings)
+    assert any(f.rule_id == "NEAR-NS-001" for f in result.expected_surface)
+
+    detected = MultichainRpcEngine(
+        "https://rpc.mainnet.near.org",
+        "Quick",
+        family="auto",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+    client.close()
+
+    assert detected.aborted is False
+    assert detected.network_name == "NEAR Mainnet"
+    assert looks_like_near_status(status)
+    assert not looks_like_near_status({"chain_id": "mainnet"})

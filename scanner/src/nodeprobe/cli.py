@@ -9,6 +9,7 @@ from nodeprobe.engine import ScannerEngine
 from nodeprobe.multichain import MultichainRpcEngine
 from nodeprobe.multichain.aptos_engine import APTOS_RULE_CATALOG, AptosScannerEngine
 from nodeprobe.multichain.cosmos_engine import COSMOS_RULE_CATALOG, CosmosScannerEngine
+from nodeprobe.multichain.near_engine import NEAR_RULE_CATALOG, NearScannerEngine
 from nodeprobe.multichain.solana_engine import SOLANA_RULE_CATALOG, SolanaScannerEngine
 from nodeprobe.multichain.starknet_engine import STARKNET_RULE_CATALOG, StarknetScannerEngine
 from nodeprobe.multichain.substrate_engine import (
@@ -40,7 +41,7 @@ _PROFILE_HELP = (
     "(aliases: Free→Quick, Outbound→Standard, Authorized-Full→Deep; default: Standard)"
 )
 _FAMILY_HELP = (
-    "RPC family: auto | evm | solana | substrate | cosmos | aptos | sui | starknet "
+    "RPC family: auto | evm | solana | substrate | cosmos | aptos | sui | starknet | near "
     "(default: auto)"
 )
 
@@ -152,6 +153,11 @@ def build_parser() -> argparse.ArgumentParser:
     starknet.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
     _add_output_flags(starknet)
 
+    near = sub.add_parser("near", help="Scan a NEAR JSON-RPC endpoint")
+    near.add_argument("url", help="HTTP(S) NEAR JSON-RPC URL")
+    near.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
+    _add_output_flags(near)
+
     web = sub.add_parser("web", help="Scan a website (HTTP/TLS surface)")
     web.add_argument("url", help="HTTP(S) website URL")
     web.add_argument("--profile", default="Standard", help=_PROFILE_HELP)
@@ -184,6 +190,7 @@ def build_parser() -> argparse.ArgumentParser:
             "aptos",
             "sui",
             "starknet",
+            "near",
             "all",
         ),
         default="all",
@@ -342,6 +349,17 @@ def main(argv: list[str] | None = None) -> int:
                 }
                 for item in STARKNET_RULE_CATALOG
             )
+        if module in {"near", "rpc", "all"}:
+            payload.extend(
+                {
+                    **item,
+                    "severity": "varies",
+                    "kind": "finding",
+                    "profiles": ["Quick", "Standard", "Deep"],
+                    "module": "near",
+                }
+                for item in NEAR_RULE_CATALOG
+            )
         print(json.dumps(payload, indent=2))
         return 0
 
@@ -394,6 +412,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "starknet":
         result = StarknetScannerEngine(args.url, args.profile).run()
+        return _print_result(result, **out_kwargs)
+
+    if args.command == "near":
+        result = NearScannerEngine(args.url, args.profile).run()
         return _print_result(result, **out_kwargs)
 
     if args.command == "web":
