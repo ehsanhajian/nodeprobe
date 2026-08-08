@@ -65,16 +65,18 @@ On **Standard** (default) and **Deep**, interesting findings trigger *bounded es
 | Surface | What Nodeprobe looks at |
 |---|---|
 | **Web** | TLS, security headers (presence + HSTS/CSP policy grading), `security.txt`, `robots.txt`, server disclosure |
-| **RPC** | Protocol **families**: EVM, Solana, Substrate/Polkadot, Cosmos, Aptos, Sui, Starknet — auto-detect or `--family`; bounded surface checks |
+| **RPC** | Protocol **families**: EVM, Solana, Substrate/Polkadot, Cosmos, Aptos, Sui, Starknet, NEAR — auto-detect or `--family`; bounded surface checks |
 | **Contracts** | EVM code presence, proxies, bytecode heuristics, Sourcify verification (read-only) |
 
-**EVM networks:** there is no per-chain engine. `nodeprobe scan <rpc>` (or `rpc --family evm`) works for **any** EVM chain — Ethereum, L2s, sidechains, appchains. Chain names come from a bundled [Chainlist](https://chainid.network) snapshot when the `chainId` is known; unknown IDs still scan with a generic name. You only need a new scanner when the **protocol** is not EVM (e.g. Solana, Cosmos, Aptos, Sui, Starknet).
+**EVM networks:** there is no per-chain engine. `nodeprobe scan <rpc>` (or `rpc --family evm`) works for **any** EVM chain — Ethereum, L2s, sidechains, appchains. Chain names come from a bundled [Chainlist](https://chainid.network) snapshot when the `chainId` is known; unknown IDs still scan with a generic name. You only need a new scanner when the **protocol** is not EVM (e.g. Solana, Cosmos, Aptos, Sui, Starknet, NEAR).
 
 The bundled Chainlist display metadata is refreshed weekly by automation. It opens or updates a PR only when the upstream registry changes; it never pushes directly to `main`.
 
 **Sui:** Nodeprobe targets the current GraphQL RPC API. Sui Foundation mainnet fullnodes disabled the deprecated JSON-RPC API in July 2026.
 
 **Starknet:** Nodeprobe identifies the felt-encoded chain ID, checks block/sync health, and uses invalid-parameter presence probes for devnet controls, method catalogs, trace/simulation APIs, and transaction submission. It never submits a transaction or executes a control method.
+
+**NEAR:** Nodeprobe checks chain and sync health, reports exposed peer/configuration data, and safely presence-probes adversarial, sandbox, and transaction methods. State-changing methods receive deliberately invalid parameters and are never executed.
 
 ### Web header grading
 
@@ -137,6 +139,7 @@ nodeprobe cosmos https://rpc.cosmos.directory:443
 nodeprobe aptos https://fullnode.mainnet.aptoslabs.com/v1
 nodeprobe sui https://graphql.mainnet.sui.io/graphql
 nodeprobe starknet https://rpc.starknet.lava.build
+nodeprobe near https://rpc.mainnet.near.org
 
 # Contract (read-only eth_call / code fetch) — any EVM chainId
 nodeprobe contract 0x… --rpc https://rpc.example.com --chain 1
@@ -184,6 +187,7 @@ nodeprobe contract 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 \
 | `nodeprobe aptos <url>` | Aptos fullnode REST (`/v1`) |
 | `nodeprobe sui <url>` | Sui GraphQL RPC |
 | `nodeprobe starknet <url>` | Starknet JSON-RPC |
+| `nodeprobe near <url>` | NEAR JSON-RPC |
 | `nodeprobe contract <addr> --rpc <url> [--chain <id>]` | EVM contract posture |
 | `nodeprobe profiles` | Show profile budgets |
 | `nodeprobe rules [--module all]` | Rule catalog |

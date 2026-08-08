@@ -6,11 +6,14 @@ from typing import Literal
 
 from nodeprobe.multichain.aptos_engine import looks_like_aptos_ledger, normalize_aptos_base
 from nodeprobe.multichain.common import is_rpc_failure
+from nodeprobe.multichain.near_engine import looks_like_near_status
 from nodeprobe.multichain.starknet_engine import looks_like_starknet_chain_id
 from nodeprobe.multichain.sui_engine import looks_like_sui_graphql
 from nodeprobe.rpc import RpcClient
 
-RpcFamily = Literal["evm", "solana", "substrate", "cosmos", "aptos", "sui", "starknet"]
+RpcFamily = Literal[
+    "evm", "solana", "substrate", "cosmos", "aptos", "sui", "starknet", "near"
+]
 
 
 def detect_family(client: RpcClient) -> RpcFamily | None:
@@ -23,6 +26,11 @@ def detect_family(client: RpcClient) -> RpcFamily | None:
     # Sui GraphQL (JSON-RPC was disabled on Foundation nodes in July 2026)
     if _detect_sui(client):
         return "sui"
+
+    # NEAR status is unambiguous and its gateway rejects unknown methods with HTTP 400.
+    ok, status_result = client.method_available("status")
+    if ok and looks_like_near_status(status_result):
+        return "near"
 
     # Starknet (before EVM because both use 0x-prefixed chain identifiers)
     ok, result = client.method_available("starknet_chainId")
@@ -43,9 +51,8 @@ def detect_family(client: RpcClient) -> RpcFamily | None:
         return "substrate"
 
     # Cosmos Tendermint JSON-RPC
-    ok, result = client.method_available("status")
-    if ok and isinstance(result, dict) and (
-        "node_info" in result or "sync_info" in result
+    if isinstance(status_result, dict) and (
+        "node_info" in status_result or "sync_info" in status_result
     ):
         return "cosmos"
 
