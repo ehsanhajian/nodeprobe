@@ -147,7 +147,7 @@ nodeprobe contract 0x… --rpc https://rpc.example.com --chain 1
 
 ### Example reports
 
-Live Standard-profile scans against a public Ethereum RPC and the USDC proxy (`0xA0b8…eB48`) on mainnet.
+Live Standard-profile scans against public Ethereum and NEAR RPC endpoints, plus the USDC proxy (`0xA0b8…eB48`) on Ethereum mainnet.
 
 **RPC — CLI**
 
@@ -160,6 +160,18 @@ nodeprobe scan https://ethereum.publicnode.com
 **RPC — HTML** (`--html -o report.html`)
 
 ![Nodeprobe HTML report for ethereum.publicnode.com](docs/screenshots/html-rpc.png)
+
+**NEAR RPC — CLI**
+
+```bash
+nodeprobe near https://rpc.mainnet.near.org
+```
+
+![Nodeprobe CLI report for NEAR Mainnet](docs/screenshots/cli-near.png)
+
+**NEAR RPC — HTML**
+
+![Nodeprobe HTML report for NEAR Mainnet](docs/screenshots/html-near.png)
 
 **Contract — CLI**
 
