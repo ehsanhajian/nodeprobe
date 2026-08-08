@@ -14,6 +14,7 @@ from nodeprobe.multichain.aptos_engine import AptosScannerEngine
 from nodeprobe.multichain.cosmos_engine import CosmosScannerEngine
 from nodeprobe.multichain.detect import RpcFamily, detect_family
 from nodeprobe.multichain.solana_engine import SolanaScannerEngine
+from nodeprobe.multichain.starknet_engine import StarknetScannerEngine
 from nodeprobe.multichain.substrate_engine import SubstrateScannerEngine
 from nodeprobe.multichain.sui_engine import SuiScannerEngine
 from nodeprobe.profiles import ProfileLimits, get_profile
@@ -115,7 +116,8 @@ class MultichainRpcEngine:
                             code="unknown_family",
                             message=(
                                 "Could not detect RPC family. "
-                                "Pass --family evm|solana|substrate|cosmos|aptos|sui."
+                                "Pass --family "
+                                "evm|solana|substrate|cosmos|aptos|sui|starknet."
                             ),
                         )
                     ],
@@ -167,6 +169,14 @@ class MultichainRpcEngine:
             ).run()
         if family == "sui":
             return SuiScannerEngine(
+                self.url,
+                self.profile_arg,
+                http_client=self.http_client,
+                skip_tls_probe=self.skip_tls_probe,
+                resolve_dns=self.resolve_dns,
+            ).run()
+        if family == "starknet":
+            return StarknetScannerEngine(
                 self.url,
                 self.profile_arg,
                 http_client=self.http_client,

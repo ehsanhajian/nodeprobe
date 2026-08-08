@@ -9,6 +9,7 @@ from nodeprobe.cli import main
 from nodeprobe.multichain import MultichainRpcEngine
 from nodeprobe.multichain.cosmos_engine import CosmosScannerEngine
 from nodeprobe.multichain.solana_engine import SolanaScannerEngine
+from nodeprobe.multichain.starknet_engine import StarknetScannerEngine, decode_felt_text
 from nodeprobe.multichain.substrate_engine import SubstrateScannerEngine
 from nodeprobe.multichain.sui_engine import SuiScannerEngine
 
@@ -265,6 +266,8 @@ def test_cli_multichain_rules(capsys):
     assert "APT-IDENT-001" in capsys.readouterr().out
     assert main(["rules", "--module", "sui"]) == 0
     assert "SUI-IDENT-001" in capsys.readouterr().out
+    assert main(["rules", "--module", "starknet"]) == 0
+    assert "STRK-IDENT-001" in capsys.readouterr().out
 
 
 def test_aptos_scan_and_detect():
@@ -406,3 +409,79 @@ def test_sui_graphql_scan_and_detect():
 
     assert detected.aborted is False
     assert detected.network_name == "Sui"
+
+
+def test_starknet_scan_and_detect():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            # Aptos auto-detection runs before JSON-RPC family probes.
+            return httpx.Response(405, json={"error": "method not allowed"})
+
+        body = json.loads(request.content.decode())
+        if "query" in body:
+            # Sui GraphQL auto-detection runs before Starknet.
+            return httpx.Response(200, json={"errors": [{"message": "not graphql"}]})
+
+        method = body["method"]
+        req_id = body["id"]
+        if method == "starknet_chainId":
+            return rpc_result(req_id, "0x534e5f4d41494e")
+        if method == "starknet_specVersion":
+            return rpc_result(req_id, "0.8.1")
+        if method == "starknet_blockNumber":
+            return rpc_result(req_id, 123456)
+        if method == "starknet_syncing":
+            return rpc_result(req_id, False)
+        if method == "rpc_methods":
+            return rpc_result(
+                req_id,
+                {
+                    "methods": [
+                        "starknet_chainId",
+                        "starknet_traceTransaction",
+                        "devnet_restart",
+                    ]
+                },
+            )
+        if method in {
+            "devnet_restart",
+            "starknet_traceTransaction",
+            "starknet_addInvokeTransaction",
+        }:
+            return rpc_error(req_id, -32602, "Invalid params")
+        return rpc_error(req_id, -32601, "Method not found")
+
+    client = httpx.Client(transport=make_transport(handler))
+    result = StarknetScannerEngine(
+        "https://starknet.example/rpc/v0_8",
+        "Standard",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+
+    assert result.aborted is False
+    assert result.network_name == "Starknet Mainnet"
+    assert result.client_version == "0.8.1"
+    assert any(f.rule_id == "STRK-DEV-001" for f in result.findings)
+    assert any(f.rule_id == "STRK-DISC-001" for f in result.findings)
+    assert any(f.rule_id == "STRK-DISC-002" for f in result.findings)
+    assert any(f.rule_id == "STRK-NS-001" for f in result.expected_surface)
+
+    detected = MultichainRpcEngine(
+        "https://starknet.example/rpc/v0_8",
+        "Quick",
+        family="auto",
+        http_client=client,
+        skip_tls_probe=True,
+        resolve_dns=False,
+    ).run()
+    client.close()
+
+    assert detected.aborted is False
+    assert detected.network_name == "Starknet Mainnet"
+
+
+def test_decode_starknet_chain_id_felt():
+    assert decode_felt_text("0x534e5f5345504f4c4941") == "SN_SEPOLIA"
+    assert decode_felt_text("not-hex") is None
