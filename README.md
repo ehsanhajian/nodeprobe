@@ -70,6 +70,8 @@ On **Standard** (default) and **Deep**, interesting findings trigger *bounded es
 
 **EVM networks:** there is no per-chain engine. `nodeprobe scan <rpc>` (or `rpc --family evm`) works for **any** EVM chain — Ethereum, L2s, sidechains, appchains. Chain names come from a bundled [Chainlist](https://chainid.network) snapshot when the `chainId` is known; unknown IDs still scan with a generic name. You only need a new scanner when the **protocol** is not EVM (e.g. Solana, Cosmos, Aptos, Sui).
 
+The bundled Chainlist display metadata is refreshed weekly by automation. It opens or updates a PR only when the upstream registry changes; it never pushes directly to `main`.
+
 **Sui:** Nodeprobe targets the current GraphQL RPC API. Sui Foundation mainnet fullnodes disabled the deprecated JSON-RPC API in July 2026.
 
 ### Web header grading
