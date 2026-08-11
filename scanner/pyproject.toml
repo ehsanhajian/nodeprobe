@@ -5,9 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nodeprobe"
 version = "0.1.0"
-description = "CLI scanner for websites, multi-chain RPC, and EVM smart contracts"
+description = "Local CLI security scanner for websites, multi-chain RPC, and EVM smart contracts"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
 dependencies = [
   "httpx>=0.27",
 ]

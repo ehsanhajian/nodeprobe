@@ -1,8 +1,8 @@
 # Nodeprobe
 
-**Probe the surfaces that matter — websites, RPC nodes, and EVM contracts — from your terminal.**
+**Local CLI security scanner for websites, multi-chain RPC nodes, and EVM smart contracts.**
 
-Local-first security scanning for infrastructure you operate or are authorized to assess. No account. No cloud. No telemetry. Just a CLI that talks to the target and prints a readable report.
+Probe the surfaces that matter — HTTP/TLS, JSON-RPC and GraphQL RPC, and contract posture — from your terminal. Local-first for infrastructure you operate or are authorized to assess. No account. No cloud. No telemetry. Just a CLI that talks to the target and prints a readable report.
 
 Default profile is **Standard** for every scan command (web, RPC, and contracts). Use `--profile Quick` for a fast pass, or `--profile Deep` for a larger budget.
 
@@ -57,6 +57,16 @@ Tip: use --html -o report.html · --json · --verbose for evidence.
 ```
 
 On **Standard** (default) and **Deep**, interesting findings trigger *bounded escalation* — extra read-only probes that confirm impact, nested under the parent as `↳ Next:`. **Quick** stays fast and skips that step.
+
+## Contents
+
+- [What it covers](#what-it-covers)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [Example reports](#example-reports)
+- [Safety by design](#safety-by-design)
+- [Development](#development)
+- [License](#license)
 
 ---
 
@@ -267,4 +277,6 @@ If Nodeprobe helps you, donations are welcome — **ETH or ERC-20 on Ethereum**:
 
 ## License
 
-Proprietary — all rights reserved unless otherwise stated.
+[MIT](LICENSE) — see [`LICENSE`](LICENSE) for the full text.
+
+Releases: [github.com/ehsanhajian/nodeprobe/releases](https://github.com/ehsanhajian/nodeprobe/releases)
