@@ -277,6 +277,8 @@ If Nodeprobe helps you, donations are welcome — **ETH or ERC-20 on Ethereum**:
 
 ## License
 
-[MIT](LICENSE) — see [`LICENSE`](LICENSE) for the full text.
+[PolyForm Noncommercial 1.0.0](LICENSE) — free for personal, educational, research, hobby, and other **noncommercial** use.
+
+**You may not use Nodeprobe commercially, sell it, or sell access to it.** See [`LICENSE`](LICENSE) for the full terms.
 
 Releases: [github.com/ehsanhajian/nodeprobe/releases](https://github.com/ehsanhajian/nodeprobe/releases)
