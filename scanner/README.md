@@ -5,9 +5,11 @@
 Probe HTTP/TLS, JSON-RPC and GraphQL RPC, and contract posture from your terminal. Local-first for infrastructure you operate or are authorized to assess. No account. No cloud. No telemetry.
 
 ```bash
-pip install nodeprobe
+pipx install nodeprobe
 nodeprobe web https://example.com
 ```
+
+Homebrew and Debian/Ubuntu block `pip install` into system Python. Use [pipx](https://pipx.pypa.io/) or a virtual environment (`python3 -m venv .venv && source .venv/bin/activate && pip install nodeprobe`). Do not pass `--break-system-packages`.
 
 Default profile is **Standard**. Use `--profile Quick` for a fast pass, or `--profile Deep` for a larger budget.
 

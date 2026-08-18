@@ -112,11 +112,20 @@ Scores, severity counts, and concrete fixes land in a human report by default. P
 
 ## Install
 
-Python **3.10+**.
+Python **3.10+**. Prefer [pipx](https://pipx.pypa.io/) so the CLI is isolated from Homebrew/system Python:
 
 ```bash
+pipx install nodeprobe
+```
+
+Or a virtual environment:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install nodeprobe
 ```
+
+Homebrew and Debian/Ubuntu mark their Python as externally managed, so `pip install nodeprobe` into that interpreter is blocked. Use pipx or a venv instead of `--break-system-packages`.
 
 Then:
 
