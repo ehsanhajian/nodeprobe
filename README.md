@@ -115,10 +115,7 @@ Scores, severity counts, and concrete fixes land in a human report by default. P
 Python **3.10+**.
 
 ```bash
-git clone https://github.com/ehsanhajian/nodeprobe.git
-cd nodeprobe/scanner
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+pip install nodeprobe
 ```
 
 Then:
@@ -258,8 +255,10 @@ Nodeprobe is built to *look*, not to break things.
 ## Development
 
 ```bash
-cd scanner
-source .venv/bin/activate
+git clone https://github.com/ehsanhajian/nodeprobe.git
+cd nodeprobe/scanner
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
 pytest -q
 ```
 
@@ -279,4 +278,5 @@ If Nodeprobe helps you, donations are welcome — **ETH or ERC-20 on Ethereum**:
 
 [MIT](LICENSE) — see [`LICENSE`](LICENSE) for the full text.
 
+PyPI: [pypi.org/project/nodeprobe](https://pypi.org/project/nodeprobe/)
 Releases: [github.com/ehsanhajian/nodeprobe/releases](https://github.com/ehsanhajian/nodeprobe/releases)
