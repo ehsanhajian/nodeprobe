@@ -131,6 +131,7 @@ Then:
 
 ```bash
 nodeprobe --help
+nodeprobe --version
 nodeprobe profiles
 ```
 

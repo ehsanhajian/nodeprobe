@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 
+from nodeprobe import __version__
 from nodeprobe.contract_engine import ContractScannerEngine
 from nodeprobe.engine import ScannerEngine
 from nodeprobe.multichain import MultichainRpcEngine
@@ -106,6 +107,12 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Nodeprobe — website, multi-chain RPC, and EVM contract scanner"
         ),
+    )
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 

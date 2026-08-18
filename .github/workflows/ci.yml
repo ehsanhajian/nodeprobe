@@ -31,3 +31,4 @@ jobs:
           nodeprobe profiles
           nodeprobe rules | python3 -c "import json,sys; assert len(json.load(sys.stdin)) >= 10"
           nodeprobe --help
+          nodeprobe --version
