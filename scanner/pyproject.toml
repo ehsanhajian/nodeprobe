@@ -1,14 +1,39 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "nodeprobe"
-version = "0.1.2"
+version = "0.1.3"
 description = "Local CLI security scanner for websites, multi-chain RPC, and EVM smart contracts"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Ehsan Hajian" }]
+keywords = [
+  "security",
+  "scanner",
+  "cli",
+  "rpc",
+  "evm",
+  "web3",
+  "tls",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Security",
+  "Topic :: System :: Networking",
+]
 dependencies = [
   "httpx>=0.27",
 ]
@@ -18,6 +43,12 @@ dev = [
   "pytest>=8.0",
   "pytest-httpx>=0.30",
 ]
+
+[project.urls]
+Homepage = "https://github.com/ehsanhajian/nodeprobe"
+Repository = "https://github.com/ehsanhajian/nodeprobe"
+Issues = "https://github.com/ehsanhajian/nodeprobe/issues"
+Releases = "https://github.com/ehsanhajian/nodeprobe/releases"
 
 [project.scripts]
 nodeprobe = "nodeprobe.cli:main"

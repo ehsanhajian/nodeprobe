@@ -1,0 +1,52 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/nodeprobe
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Check version matches release tag
+        if: github.event_name == 'release'
+        working-directory: scanner
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          grep -q "^version = \"${TAG}\"" pyproject.toml
+          grep -q "__version__ = \"${TAG}\"" src/nodeprobe/__init__.py
+
+      - name: Install scanner
+        working-directory: scanner
+        run: pip install -e ".[dev]"
+
+      - name: Run scanner tests
+        working-directory: scanner
+        run: pytest -q
+
+      - name: Build
+        working-directory: scanner
+        run: |
+          python -m pip install -U build
+          python -m build
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: scanner/dist
