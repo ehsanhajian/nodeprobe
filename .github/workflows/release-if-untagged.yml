@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   release:
@@ -16,6 +17,10 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
       - name: Create GitHub release for a new package version
         env:
@@ -30,13 +35,9 @@ jobs:
             echo "Tag v${VERSION} already exists; nothing to publish"
             exit 0
           fi
+          python3 scripts/chainlist_release_notes.py > /tmp/release-notes.md
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
-            --notes "$(cat <<EOF
-          Bundled Chainlist name registry update, or other package version bump.
-
-          \`\`\`bash
-          pipx upgrade nodeprobe
-          \`\`\`
-          EOF
-          )"
+            --notes-file /tmp/release-notes.md
+          # GITHUB_TOKEN release events do not start other workflows; dispatch publish explicitly.
+          gh workflow run publish-pypi.yml --ref "v${VERSION}"
