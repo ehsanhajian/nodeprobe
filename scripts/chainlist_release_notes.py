@@ -52,12 +52,7 @@ def format_release_notes(
     previous: dict[str, dict[str, Any]],
     registry: dict[str, dict[str, Any]],
 ) -> str:
-    added, _removed, renamed = refresh_chainlist.registry_delta(previous, registry)
-    name_renames = [
-        chain_id
-        for chain_id in renamed
-        if previous[chain_id].get("name") != registry[chain_id].get("name")
-    ]
+    added, _removed, _renamed = refresh_chainlist.registry_delta(previous, registry)
     lines = ["## Chainlist", ""]
     if added:
         noun = "network" if len(added) == 1 else "networks"
@@ -67,16 +62,8 @@ def format_release_notes(
             name = registry[chain_id].get("name") or f"Chain {chain_id}"
             lines.append(f"- {name} (`{chain_id}`)")
         lines.append("")
-    if name_renames:
-        lines.append("Renamed:")
-        lines.append("")
-        for chain_id in name_renames:
-            old = previous[chain_id].get("name") or chain_id
-            new = registry[chain_id].get("name") or chain_id
-            lines.append(f"- {old} → {new} (`{chain_id}`)")
-        lines.append("")
-    if not added and not name_renames:
-        lines.append("No new or renamed Chainlist networks in this release.")
+    else:
+        lines.append("No new Chainlist networks in this release.")
         lines.append("")
     lines.extend(
         [
