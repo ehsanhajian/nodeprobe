@@ -127,6 +127,35 @@ def build_registry(
     return {str(chain_id): records[chain_id] for chain_id in sorted(records)}
 
 
+def registry_delta(
+    previous: dict[str, dict[str, Any]],
+    registry: dict[str, dict[str, Any]],
+) -> tuple[list[str], list[str], list[str]]:
+    """Return added, removed, and changed chain-ID keys."""
+    prev_ids = set(previous)
+    new_ids = set(registry)
+    added = sorted(new_ids - prev_ids, key=lambda item: int(item))
+    removed = sorted(prev_ids - new_ids, key=lambda item: int(item))
+    renamed = sorted(
+        (
+            chain_id
+            for chain_id in prev_ids & new_ids
+            if previous[chain_id] != registry[chain_id]
+        ),
+        key=lambda item: int(item),
+    )
+    return added, removed, renamed
+
+
+def _write_github_output(values: dict[str, str]) -> None:
+    path = os.environ.get("GITHUB_OUTPUT")
+    if not path:
+        return
+    with Path(path).open("a", encoding="utf-8") as handle:
+        for key, value in values.items():
+            handle.write(f"{key}={value}\n")
+
+
 def serialize_registry(registry: dict[str, dict[str, Any]]) -> str:
     return json.dumps(
         registry,
@@ -174,10 +203,20 @@ def main() -> int:
     content = serialize_registry(registry)
     current = args.output.read_text(encoding="utf-8") if args.output.exists() else ""
 
+    added, removed, renamed = registry_delta(existing, registry)
     changed = content != current
     print(
         f"Chainlist entries: {len(registry)}; "
-        f"output: {args.output}; changed: {str(changed).lower()}"
+        f"output: {args.output}; changed: {str(changed).lower()}; "
+        f"added: {len(added)}; removed: {len(removed)}; renamed: {len(renamed)}"
+    )
+    _write_github_output(
+        {
+            "changed": str(changed).lower(),
+            "added": str(len(added)),
+            "removed": str(len(removed)),
+            "renamed": str(len(renamed)),
+        }
     )
     if args.check:
         return 1 if changed else 0

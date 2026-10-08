@@ -21,7 +21,7 @@ Default profile is **Standard**. Use `--profile Quick` for a fast pass, or `--pr
 | **RPC** | Protocol **families**: EVM, Solana, Substrate/Polkadot, Cosmos, Aptos, Sui, Starknet, NEAR — auto-detect or `--family` |
 | **Contracts** | EVM code presence, proxies, bytecode heuristics, Sourcify verification (read-only) |
 
-EVM networks share one engine. `nodeprobe scan <rpc>` works for any EVM chain. Chain names come from a bundled [Chainlist](https://chainid.network) snapshot; unknown IDs still scan with a generic name.
+EVM networks share one engine. `nodeprobe scan <rpc>` works for any EVM chain. Chain names come from a bundled [Chainlist](https://chainid.network) snapshot; unknown IDs still scan with a generic name. New chain IDs in that snapshot ship as a PyPI patch release.
 
 ## Quick start
 
