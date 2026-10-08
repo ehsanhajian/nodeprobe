@@ -1,0 +1,42 @@
+name: Release untagged package version
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag and release when version has no GitHub tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create GitHub release for a new package version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' scanner/pyproject.toml | head -n 1)"
+          if [ -z "$VERSION" ]; then
+            echo "Could not read scanner package version"
+            exit 1
+          fi
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+            echo "Tag v${VERSION} already exists; nothing to publish"
+            exit 0
+          fi
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --notes "$(cat <<EOF
+          Bundled Chainlist name registry update, or other package version bump.
+
+          \`\`\`bash
+          pipx upgrade nodeprobe
+          \`\`\`
+          EOF
+          )"

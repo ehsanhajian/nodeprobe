@@ -64,6 +64,24 @@ def test_serialized_registry_is_compact_and_stable():
     assert "\n" not in first.rstrip("\n")
 
 
+def test_registry_delta_counts_added_and_renamed_ids():
+    previous = {
+        "1": {"name": "Ethereum Mainnet", "short_name": "eth", "is_testnet": False},
+        "10": {"name": "Old OP", "short_name": "oeth", "is_testnet": False},
+    }
+    registry = {
+        "1": {"name": "Ethereum Mainnet", "short_name": "eth", "is_testnet": False},
+        "10": {"name": "OP Mainnet", "short_name": "oeth", "is_testnet": False},
+        "99": {"name": "New Chain", "short_name": "new", "is_testnet": True},
+    }
+
+    added, removed, renamed = refresh_chainlist.registry_delta(previous, registry)
+
+    assert added == ["99"]
+    assert removed == []
+    assert renamed == ["10"]
+
+
 def test_validate_registry_rejects_truncated_source():
     with pytest.raises(ValueError, match="suspiciously small"):
         refresh_chainlist.validate_registry(
